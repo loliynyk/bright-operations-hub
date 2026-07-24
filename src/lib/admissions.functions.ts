@@ -34,92 +34,25 @@ export const convertLeadToClient = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { leadId: string }) => z.object({ leadId: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
-    const { supabase, userId } = context;
+    const { supabase } = context;
 
-    const { data: lead, error: leadErr } = await supabase.from("leads").select("*").eq("id", data.leadId).maybeSingle();
-    if (leadErr) throw new Error(leadErr.message);
-    if (!lead) throw new Error("Лід не знайдено");
+    const { data: rpcRows, error: rpcErr } = await supabase.rpc("convert_lead_to_client", { _lead_id: data.leadId });
+    if (rpcErr) throw new Error(rpcErr.message);
+    const row = Array.isArray(rpcRows) ? rpcRows[0] : rpcRows;
+    if (!row?.client_id) throw new Error("Не вдалося створити клієнта");
 
-    // idempotent
-    if (lead.converted_client_id) {
-      return { clientId: lead.converted_client_id };
-    }
-    if (!lead.branch_id) throw new Error("Оберіть філію в ліді перед конвертацією");
+    const clientId: string = row.client_id;
+    const contractId: string | undefined = row.contract_id ?? undefined;
 
-    const parentFirst = lead.parent_first_name || (lead.parent_name ?? "").split(" ")[0] || "Батьки";
-    const parentLast = lead.parent_last_name || (lead.parent_name ?? "").split(" ").slice(1).join(" ") || "—";
-    const childFirst = lead.child_first_name || lead.child_name || "Дитина";
-    const childLast = lead.child_last_name ?? null;
-
-    // 1. Client
-    const { data: client, error: clientErr } = await supabase.from("clients").insert({
-      branch_id: lead.branch_id,
-      lead_id: lead.id,
-      service_id: lead.service_id ?? null,
-      parent_first_name: parentFirst,
-      parent_last_name: parentLast,
-      phone: lead.parent_phone,
-      email: lead.parent_email,
-      address: lead.parent_address,
-      notes: lead.notes,
-      created_by: userId,
-    }).select().maybeSingle();
-    if (clientErr || !client) throw new Error(clientErr?.message ?? "Не вдалося створити клієнта");
-
-    // 2. Child
-    const { data: child } = await supabase.from("children").insert({
-      client_id: client.id,
-      branch_id: lead.branch_id,
-      first_name: childFirst,
-      last_name: childLast,
-      birth_date: lead.child_birthdate,
-      start_date: lead.desired_start_date,
-    }).select().maybeSingle();
-
-    // 3. Draft contract — pick first plan+price if present
-    const { data: firstPlan } = await supabase.from("subscription_plans").select("id").eq("is_active", true).limit(1).maybeSingle();
-    let priceVersionId: string | null = null;
-    let monthlyPrice = 0;
-    if (firstPlan) {
-      const { data: pv } = await supabase.from("price_versions").select("id, monthly_price").eq("plan_id", firstPlan.id).eq("is_active", true).limit(1).maybeSingle();
-      if (pv) { priceVersionId = pv.id; monthlyPrice = Number(pv.monthly_price); }
-    }
-    const startDate = lead.desired_start_date ?? new Date().toISOString().slice(0, 10);
-    const { data: contract, error: contractErr } = await supabase.from("contracts").insert({
-      branch_id: lead.branch_id,
-      client_id: client.id,
-      child_id: child?.id ?? null,
-      service_id: lead.service_id ?? null,
-      plan_id: firstPlan?.id ?? null,
-      price_version_id: priceVersionId,
-      monthly_price: monthlyPrice,
-      start_date: startDate,
-      status: "draft",
-      created_by: userId,
-    }).select().maybeSingle();
-    if (contractErr) throw new Error(contractErr.message);
-
-    // 4. Update lead
-    await supabase.from("leads").update({
-      status: "converted",
-      converted_client_id: client.id,
-    }).eq("id", lead.id);
-
-    // 5. Timeline events
-    await insertTimeline(supabase, userId, { lead_id: lead.id, client_id: client.id, type: "status_changed", payload: { from: lead.status, to: "converted" } });
-    await insertTimeline(supabase, userId, { lead_id: lead.id, client_id: client.id, type: "client_created", payload: {} });
-    if (contract) {
-      await insertTimeline(supabase, userId, { client_id: client.id, contract_id: contract.id, type: "contract_generated", payload: { number: contract.number } });
+    // Best-effort side effects (charges + PDF) after atomic conversion
+    if (contractId) {
+      try { await generateInitialChargesInner(context, contractId); } catch (e) { console.error("charges error", e); }
+      try { await generateContractPdfInner(context, contractId); } catch (e) { console.error("pdf error", e); }
     }
 
-    // 6. Generate initial charges + PDF (best-effort)
-    if (contract) {
-      try { await generateInitialChargesInner(context, contract.id); } catch (e) { console.error("charges error", e); }
-      try { await generateContractPdfInner(context, contract.id); } catch (e) { console.error("pdf error", e); }
-    }
-
-    return { clientId: client.id, contractId: contract?.id };
+    return { clientId, contractId };
   });
+
 
 async function generateInitialChargesInner(context: any, contractId: string) {
   const { supabase, userId } = context;
