@@ -1,0 +1,378 @@
+# Bright OS – Prompt 003
+## Backend Foundation (Supabase)
+
+IMPORTANT
+
+Do NOT redesign any UI.
+
+Do NOT change navigation.
+
+Do NOT modify styling.
+
+Do NOT create new pages unless required for testing.
+
+Your goal is to make the existing application functional using Supabase.
+
+--------------------------------------------------
+
+OBJECTIVE
+
+Replace placeholder logic with a proper relational data model.
+
+Implement database schema, relationships and Row Level Security.
+
+The application should become capable of performing real CRUD operations.
+
+--------------------------------------------------
+
+DATABASE
+
+Use Supabase as the single source of truth.
+
+Every table must use UUID primary keys.
+
+Every table must include:
+
+id
+created_at
+updated_at
+
+--------------------------------------------------
+
+CORE TABLES
+
+Create or validate:
+
+branches
+
+services
+
+leads
+
+clients
+
+children
+
+groups
+
+contracts
+
+subscription_plans
+
+price_versions
+
+discounts
+
+charges
+
+payments
+
+expenses
+
+employees
+
+timeline
+
+users
+
+--------------------------------------------------
+
+RELATIONSHIPS
+
+Branch
+
+1 → many Services
+
+1 → many Leads
+
+1 → many Clients
+
+1 → many Groups
+
+1 → many Employees
+
+1 → many Expenses
+
+--------------------------------------------------
+
+Lead
+
+belongs_to Branch
+
+belongs_to Service
+
+optional belongs_to Client
+
+--------------------------------------------------
+
+Client
+
+belongs_to Branch
+
+has many Children
+
+has many Contracts
+
+has many Charges
+
+has many Payments
+
+--------------------------------------------------
+
+Child
+
+belongs_to Client
+
+belongs_to Group
+
+--------------------------------------------------
+
+Contract
+
+belongs_to Client
+
+belongs_to Subscription Plan
+
+belongs_to Price Version
+
+optional belongs_to Discount
+
+--------------------------------------------------
+
+Charge
+
+belongs_to Contract
+
+belongs_to Client
+
+--------------------------------------------------
+
+Payment
+
+belongs_to Client
+
+optional belongs_to Charge
+
+--------------------------------------------------
+
+Expense
+
+belongs_to Branch
+
+--------------------------------------------------
+
+TIMELINE
+
+Timeline should support:
+
+Lead Created
+
+Lead Updated
+
+Lead Converted
+
+Client Created
+
+Contract Generated
+
+Charges Generated
+
+Payment Received
+
+--------------------------------------------------
+
+LEAD CONVERSION
+
+Fix "Create Client".
+
+Current error:
+
+Supabase Row Level Security prevents insert into clients.
+
+Implement proper solution.
+
+When "Create Client" is clicked:
+
+1
+
+Create Client
+
+↓
+
+2
+
+Create Child
+
+↓
+
+3
+
+Create Draft Contract
+
+↓
+
+4
+
+Create Timeline event
+
+↓
+
+5
+
+Update Lead status
+
+Converted
+
+↓
+
+6
+
+Store client_id inside Lead
+
+This entire operation must run as one transaction.
+
+If any step fails
+
+rollback.
+
+--------------------------------------------------
+
+ROW LEVEL SECURITY
+
+Keep RLS enabled.
+
+Do NOT disable security.
+
+Create policies allowing authenticated users to:
+
+SELECT
+
+INSERT
+
+UPDATE
+
+DELETE
+
+according to future role model.
+
+For now
+
+all authenticated users have full access.
+
+Anonymous users have no access.
+
+--------------------------------------------------
+
+LOOKUPS
+
+Create lookup tables:
+
+Lead Status
+
+Lead Source
+
+Subscription Plans
+
+Discounts
+
+Expense Categories
+
+Payment Methods
+
+Contract Status
+
+Charge Status
+
+Groups
+
+Services
+
+Populate with seed data.
+
+--------------------------------------------------
+
+SEED DATA
+
+Create:
+
+Branches
+
+Bright 319
+
+Bright ZV
+
+Bright NGO
+
+Subscription Plans
+
+Повний день
+
+Пів дня
+
+NGO
+
+Camp
+
+Lead Statuses
+
+Новий
+
+Зв'язались
+
+Очікує
+
+Пробне
+
+Договір
+
+Конвертований
+
+Втрачений
+
+--------------------------------------------------
+
+SEARCH
+
+Global Search should query real database.
+
+Search:
+
+Leads
+
+Clients
+
+Children
+
+Groups
+
+--------------------------------------------------
+
+DATA INTEGRITY
+
+Use foreign keys.
+
+Use cascading only where appropriate.
+
+Never duplicate data.
+
+Never store calculated values if they can be derived.
+
+--------------------------------------------------
+
+DO NOT BUILD
+
+Finance
+
+Reports
+
+Attendance
+
+Analytics
+
+Notifications
+
+Email
+
+PDF generation improvements
+
+Focus only on making the current application production-ready.
