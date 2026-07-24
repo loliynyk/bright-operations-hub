@@ -267,7 +267,7 @@ export const updateContract = createServerFn({ method: "POST" })
       if (pv) patch.monthly_price = Number(pv.monthly_price);
     }
     const { data: updated, error } = await context.supabase
-      .from("contracts").update(patch).eq("id", id).select().maybeSingle();
+      .from("contracts").update(patch as any).eq("id", id).select().maybeSingle();
     if (error) throw new Error(error.message);
     return updated;
   });

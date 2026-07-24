@@ -58,36 +58,31 @@ export const saveLead = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const { id, ...payload } = data;
     const pn = payload.parent_name
-      ?? [payload.parent_first_name, payload.parent_last_name].filter(Boolean).join(" ").trim()
-      || "Без імені";
+      ?? ([payload.parent_first_name, payload.parent_last_name].filter(Boolean).join(" ").trim() || "Без імені");
     const cn = payload.child_name
-      ?? [payload.child_first_name, payload.child_last_name].filter(Boolean).join(" ").trim()
-      || null;
+      ?? ([payload.child_first_name, payload.child_last_name].filter(Boolean).join(" ").trim() || null);
+    const row: any = { ...payload, parent_name: pn, child_name: cn };
 
     if (id) {
       const prev = await context.supabase.from("leads").select("status").eq("id", id).maybeSingle();
       const { data: updated, error } = await context.supabase
-        .from("leads")
-        .update({ ...payload, parent_name: pn, child_name: cn })
-        .eq("id", id).select().maybeSingle();
+        .from("leads").update(row).eq("id", id).select().maybeSingle();
       if (error) throw new Error(error.message);
       if (payload.status && prev.data?.status !== payload.status) {
         await context.supabase.from("timeline_events").insert({
           lead_id: id, type: "status_changed", actor_id: context.userId,
           payload: { from: prev.data?.status, to: payload.status },
-        });
+        } as any);
       }
       return updated;
     } else {
       const { data: created, error } = await context.supabase
-        .from("leads")
-        .insert({ ...payload, parent_name: pn, child_name: cn, created_by: context.userId })
-        .select().maybeSingle();
+        .from("leads").insert({ ...row, created_by: context.userId }).select().maybeSingle();
       if (error) throw new Error(error.message);
       if (created) {
         await context.supabase.from("timeline_events").insert({
           lead_id: created.id, type: "lead_created", actor_id: context.userId, payload: {},
-        });
+        } as any);
       }
       return created;
     }

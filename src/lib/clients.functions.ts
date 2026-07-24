@@ -54,7 +54,7 @@ export const updateClient = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => updateSchema.parse(d))
   .handler(async ({ context, data }) => {
     const { id, ...patch } = data;
-    const { data: updated, error } = await context.supabase.from("clients").update(patch).eq("id", id).select().maybeSingle();
+    const { data: updated, error } = await context.supabase.from("clients").update(patch as any).eq("id", id).select().maybeSingle();
     if (error) throw new Error(error.message);
     return updated;
   });
@@ -78,11 +78,11 @@ export const saveChild = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const { id, ...payload } = data;
     if (id) {
-      const { data: updated, error } = await context.supabase.from("children").update(payload).eq("id", id).select().maybeSingle();
+      const { data: updated, error } = await context.supabase.from("children").update(payload as any).eq("id", id).select().maybeSingle();
       if (error) throw new Error(error.message);
       return updated;
     }
-    const { data: created, error } = await context.supabase.from("children").insert(payload).select().maybeSingle();
+    const { data: created, error } = await context.supabase.from("children").insert(payload as any).select().maybeSingle();
     if (error) throw new Error(error.message);
     return created;
   });
