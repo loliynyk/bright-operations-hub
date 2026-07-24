@@ -2,12 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Users } from "lucide-react";
 import { PlaceholderPage } from "@/components/placeholder-page";
 
-export const Route = createFileRoute("/_authenticated/leads")({
+export const Route = createFileRoute("/_authenticated/admin/groups")({
   component: () => (
     <PlaceholderPage
-      title='Ліди'
-      description='У цьому модулі буде управління лідами.'
-      actionLabel='Створити ліда'
+      title='Групи'
+      description='Керуйте групами вихованців.'
+      actionLabel='Створити групу'
       icon={Users}
     />
   ),
