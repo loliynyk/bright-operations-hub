@@ -1,0 +1,453 @@
+# Bright OS – Prompt 002
+## Admissions Engine (Lead → Client → Contract)
+
+IMPORTANT
+
+Do NOT redesign or refactor existing application.
+
+Do NOT change navigation.
+
+Do NOT rename existing menu items.
+
+Do NOT modify styling.
+
+Only EXTEND the existing application.
+
+Continue using the existing design system and components.
+
+Language: Ukrainian only.
+
+Database names remain English.
+
+UI labels remain Ukrainian.
+
+--------------------------------------
+
+GOAL
+
+Implement the complete admissions workflow.
+
+The workflow starts with a Lead and ends with an active Client with:
+
+• Contract
+• Generated PDF
+• First quarter Charges
+
+No Finance pages yet.
+
+Only implement the workflow.
+
+--------------------------------------
+
+NEW MODULES
+
+Lead Details
+
+Client Details
+
+Contract
+
+--------------------------------------
+
+LEADS
+
+Create Lead Details page.
+
+Keep the Lead forever.
+
+Never delete after conversion.
+
+Lead statuses:
+
+Новий
+
+Зв'язались
+
+Очікує
+
+Пробне заняття
+
+Договір
+
+Конвертований
+
+Втрачений
+
+Архів
+
+Fields
+
+General
+
+- Branch
+- Service
+- Source Form
+- Registration Date
+
+Parent
+
+- First Name
+- Last Name
+- Phone
+- Email
+- Address
+
+Child
+
+- First Name
+- Last Name
+- Birth Date
+- Desired Start Date
+
+CRM
+
+- Manager
+- Notes
+- Trial Date
+- Lost Reason
+
+Show Timeline on the right side.
+
+--------------------------------------
+
+CONVERT TO CLIENT
+
+Primary action
+
+"Створити клієнта"
+
+When clicked
+
+Open confirmation dialog.
+
+After confirmation automatically create:
+
+Client
+
+Child
+
+Contract
+
+Timeline event
+
+Do NOT delete Lead.
+
+Lead status becomes:
+
+Конвертований
+
+Store relation
+
+Lead → Client
+
+--------------------------------------
+
+CLIENT
+
+Create Client Details page.
+
+Tabs
+
+Основне
+
+Діти
+
+Фінанси
+
+Договір
+
+Історія
+
+General
+
+Parent information
+
+Contact information
+
+Notes
+
+Children tab
+
+One client may have multiple children.
+
+Each child has
+
+- First Name
+- Last Name
+- Birth Date
+- Group
+- Status
+- Start Date
+- End Date
+
+--------------------------------------
+
+CONTRACT
+
+When Client is created
+
+Automatically create Draft Contract.
+
+Fields
+
+Contract Number
+
+Branch
+
+Service
+
+Subscription Plan
+
+Price Version
+
+Discount
+
+Manual Discount
+
+Monthly Price
+
+Start Date
+
+End Date
+
+Status
+
+Comment
+
+Statuses
+
+Чернетка
+
+Згенерований
+
+Надісланий
+
+Підписаний
+
+Скасований
+
+Завершений
+
+--------------------------------------
+
+PDF
+
+Add button
+
+"Згенерувати договір"
+
+Generate PDF from placeholder template.
+
+Store generated PDF inside Client attachments.
+
+No document library.
+
+No e-signature.
+
+No sending email yet.
+
+--------------------------------------
+
+DISCOUNTS
+
+Add Discount selector.
+
+Lookup only.
+
+Discount applies to whole contract.
+
+Support
+
+Percentage
+
+Fixed amount
+
+--------------------------------------
+
+PRICE VERSION
+
+Contract references a Price Version.
+
+Do NOT store raw price only.
+
+Use
+
+Subscription Plan
+
++
+
+Price Version
+
+to determine Monthly Price.
+
+--------------------------------------
+
+SUBSCRIPTION PLAN
+
+Create lookup.
+
+Examples
+
+Повний день
+
+Пів дня
+
+NGO
+
+Camp
+
+Monthly Fee is calculated from selected Price Version.
+
+--------------------------------------
+
+AUTOMATIONS
+
+After Contract creation
+
+Automatically generate first 3 monthly Charges.
+
+Do not build Charges UI yet.
+
+Only create records.
+
+Business rule
+
+If Start Date is not first day of month
+
+First Charge is prorated.
+
+Next two months are full amount.
+
+--------------------------------------
+
+CLIENT TIMELINE
+
+Automatically record:
+
+Lead Created
+
+Status Changed
+
+Client Created
+
+Contract Generated
+
+PDF Generated
+
+Charges Generated
+
+--------------------------------------
+
+SEARCH
+
+Implement global search (Ctrl/Cmd + K).
+
+For now search:
+
+Leads
+
+Clients
+
+Children
+
+Groups
+
+Results should open corresponding detail page.
+
+Search must remain available in application header.
+
+--------------------------------------
+
+BRANCH ARCHITECTURE
+
+Everything belongs to a Branch.
+
+Current branches
+
+Bright 319
+
+Bright ZV
+
+Bright NGO
+
+Admin can add more later.
+
+Every Lead, Client, Child and Contract belongs to one Branch.
+
+--------------------------------------
+
+SERVICES
+
+Each Branch can contain multiple Services.
+
+Examples
+
+Preschool
+
+NGO
+
+Camp
+
+School Preparation
+
+Service is selected on Lead.
+
+Service flows into Client and Contract.
+
+--------------------------------------
+
+DO NOT BUILD YET
+
+Payments
+
+Expenses
+
+Finance Dashboard
+
+Attendance
+
+Teacher Portal
+
+Reports
+
+Analytics
+
+Notifications
+
+Email sending
+
+Electronic signatures
+
+Those will come in later prompts.
+
+--------------------------------------
+
+SUCCESS CRITERIA
+
+A user should be able to:
+
+1. Open Lead.
+
+2. Review information.
+
+3. Change Lead status.
+
+4. Click "Створити клієнта".
+
+5. Automatically receive:
+
+   • Client
+
+   • Child
+
+   • Draft Contract
+
+   • Generated PDF
+
+   • First 3 Charges
+
+6. Open Client page.
+
+7. View Timeline.
+
+No manual duplicate data entry.
