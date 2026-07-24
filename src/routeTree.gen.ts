@@ -14,6 +14,9 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedStaffRouteImport } from './routes/_authenticated/staff'
 import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated/overview'
+import { Route as AuthenticatedLeadsIndexRouteImport } from './routes/_authenticated/leads.index'
+import { Route as AuthenticatedClientsIndexRouteImport } from './routes/_authenticated/clients.index'
+import { Route as AuthenticatedLeadsIdRouteImport } from './routes/_authenticated/leads.$id'
 import { Route as AuthenticatedFinancePnlRouteImport } from './routes/_authenticated/finance.pnl'
 import { Route as AuthenticatedFinancePaymentsRouteImport } from './routes/_authenticated/finance.payments'
 import { Route as AuthenticatedFinanceExpensesRouteImport } from './routes/_authenticated/finance.expenses'
@@ -21,6 +24,7 @@ import { Route as AuthenticatedFinanceContractsRouteImport } from './routes/_aut
 import { Route as AuthenticatedFinanceChargesRouteImport } from './routes/_authenticated/finance.charges'
 import { Route as AuthenticatedFinanceCashFlowRouteImport } from './routes/_authenticated/finance.cash-flow'
 import { Route as AuthenticatedClientsGroupsRouteImport } from './routes/_authenticated/clients.groups'
+import { Route as AuthenticatedClientsIdRouteImport } from './routes/_authenticated/clients.$id'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminSubscriptionPlansRouteImport } from './routes/_authenticated/admin.subscription-plans'
 import { Route as AuthenticatedAdminRolesRouteImport } from './routes/_authenticated/admin.roles'
@@ -56,6 +60,22 @@ const AuthenticatedStaffRoute = AuthenticatedStaffRouteImport.update({
 const AuthenticatedOverviewRoute = AuthenticatedOverviewRouteImport.update({
   id: '/overview',
   path: '/overview',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedLeadsIndexRoute = AuthenticatedLeadsIndexRouteImport.update({
+  id: '/leads/',
+  path: '/leads/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedClientsIndexRoute =
+  AuthenticatedClientsIndexRouteImport.update({
+    id: '/clients/',
+    path: '/clients/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedLeadsIdRoute = AuthenticatedLeadsIdRouteImport.update({
+  id: '/leads/$id',
+  path: '/leads/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedFinancePnlRoute = AuthenticatedFinancePnlRouteImport.update({
@@ -99,6 +119,11 @@ const AuthenticatedClientsGroupsRoute =
     path: '/clients/groups',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedClientsIdRoute = AuthenticatedClientsIdRouteImport.update({
+  id: '/clients/$id',
+  path: '/clients/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
   id: '/admin/users',
   path: '/admin/users',
@@ -187,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/admin/subscription-plans': typeof AuthenticatedAdminSubscriptionPlansRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/clients/$id': typeof AuthenticatedClientsIdRoute
   '/clients/groups': typeof AuthenticatedClientsGroupsRoute
   '/finance/cash-flow': typeof AuthenticatedFinanceCashFlowRoute
   '/finance/charges': typeof AuthenticatedFinanceChargesRoute
@@ -194,6 +220,9 @@ export interface FileRoutesByFullPath {
   '/finance/expenses': typeof AuthenticatedFinanceExpensesRoute
   '/finance/payments': typeof AuthenticatedFinancePaymentsRoute
   '/finance/pnl': typeof AuthenticatedFinancePnlRoute
+  '/leads/$id': typeof AuthenticatedLeadsIdRoute
+  '/clients/': typeof AuthenticatedClientsIndexRoute
+  '/leads/': typeof AuthenticatedLeadsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -212,6 +241,7 @@ export interface FileRoutesByTo {
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/admin/subscription-plans': typeof AuthenticatedAdminSubscriptionPlansRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/clients/$id': typeof AuthenticatedClientsIdRoute
   '/clients/groups': typeof AuthenticatedClientsGroupsRoute
   '/finance/cash-flow': typeof AuthenticatedFinanceCashFlowRoute
   '/finance/charges': typeof AuthenticatedFinanceChargesRoute
@@ -219,6 +249,9 @@ export interface FileRoutesByTo {
   '/finance/expenses': typeof AuthenticatedFinanceExpensesRoute
   '/finance/payments': typeof AuthenticatedFinancePaymentsRoute
   '/finance/pnl': typeof AuthenticatedFinancePnlRoute
+  '/leads/$id': typeof AuthenticatedLeadsIdRoute
+  '/clients': typeof AuthenticatedClientsIndexRoute
+  '/leads': typeof AuthenticatedLeadsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -239,6 +272,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/roles': typeof AuthenticatedAdminRolesRoute
   '/_authenticated/admin/subscription-plans': typeof AuthenticatedAdminSubscriptionPlansRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/_authenticated/clients/$id': typeof AuthenticatedClientsIdRoute
   '/_authenticated/clients/groups': typeof AuthenticatedClientsGroupsRoute
   '/_authenticated/finance/cash-flow': typeof AuthenticatedFinanceCashFlowRoute
   '/_authenticated/finance/charges': typeof AuthenticatedFinanceChargesRoute
@@ -246,6 +280,9 @@ export interface FileRoutesById {
   '/_authenticated/finance/expenses': typeof AuthenticatedFinanceExpensesRoute
   '/_authenticated/finance/payments': typeof AuthenticatedFinancePaymentsRoute
   '/_authenticated/finance/pnl': typeof AuthenticatedFinancePnlRoute
+  '/_authenticated/leads/$id': typeof AuthenticatedLeadsIdRoute
+  '/_authenticated/clients/': typeof AuthenticatedClientsIndexRoute
+  '/_authenticated/leads/': typeof AuthenticatedLeadsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -266,6 +303,7 @@ export interface FileRouteTypes {
     | '/admin/roles'
     | '/admin/subscription-plans'
     | '/admin/users'
+    | '/clients/$id'
     | '/clients/groups'
     | '/finance/cash-flow'
     | '/finance/charges'
@@ -273,6 +311,9 @@ export interface FileRouteTypes {
     | '/finance/expenses'
     | '/finance/payments'
     | '/finance/pnl'
+    | '/leads/$id'
+    | '/clients/'
+    | '/leads/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -291,6 +332,7 @@ export interface FileRouteTypes {
     | '/admin/roles'
     | '/admin/subscription-plans'
     | '/admin/users'
+    | '/clients/$id'
     | '/clients/groups'
     | '/finance/cash-flow'
     | '/finance/charges'
@@ -298,6 +340,9 @@ export interface FileRouteTypes {
     | '/finance/expenses'
     | '/finance/payments'
     | '/finance/pnl'
+    | '/leads/$id'
+    | '/clients'
+    | '/leads'
   id:
     | '__root__'
     | '/'
@@ -317,6 +362,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/roles'
     | '/_authenticated/admin/subscription-plans'
     | '/_authenticated/admin/users'
+    | '/_authenticated/clients/$id'
     | '/_authenticated/clients/groups'
     | '/_authenticated/finance/cash-flow'
     | '/_authenticated/finance/charges'
@@ -324,6 +370,9 @@ export interface FileRouteTypes {
     | '/_authenticated/finance/expenses'
     | '/_authenticated/finance/payments'
     | '/_authenticated/finance/pnl'
+    | '/_authenticated/leads/$id'
+    | '/_authenticated/clients/'
+    | '/_authenticated/leads/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -367,6 +416,27 @@ declare module '@tanstack/react-router' {
       path: '/overview'
       fullPath: '/overview'
       preLoaderRoute: typeof AuthenticatedOverviewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/leads/': {
+      id: '/_authenticated/leads/'
+      path: '/leads'
+      fullPath: '/leads/'
+      preLoaderRoute: typeof AuthenticatedLeadsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/clients/': {
+      id: '/_authenticated/clients/'
+      path: '/clients'
+      fullPath: '/clients/'
+      preLoaderRoute: typeof AuthenticatedClientsIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/leads/$id': {
+      id: '/_authenticated/leads/$id'
+      path: '/leads/$id'
+      fullPath: '/leads/$id'
+      preLoaderRoute: typeof AuthenticatedLeadsIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/finance/pnl': {
@@ -416,6 +486,13 @@ declare module '@tanstack/react-router' {
       path: '/clients/groups'
       fullPath: '/clients/groups'
       preLoaderRoute: typeof AuthenticatedClientsGroupsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/clients/$id': {
+      id: '/_authenticated/clients/$id'
+      path: '/clients/$id'
+      fullPath: '/clients/$id'
+      preLoaderRoute: typeof AuthenticatedClientsIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/users': {
@@ -520,6 +597,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRolesRoute: typeof AuthenticatedAdminRolesRoute
   AuthenticatedAdminSubscriptionPlansRoute: typeof AuthenticatedAdminSubscriptionPlansRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
+  AuthenticatedClientsIdRoute: typeof AuthenticatedClientsIdRoute
   AuthenticatedClientsGroupsRoute: typeof AuthenticatedClientsGroupsRoute
   AuthenticatedFinanceCashFlowRoute: typeof AuthenticatedFinanceCashFlowRoute
   AuthenticatedFinanceChargesRoute: typeof AuthenticatedFinanceChargesRoute
@@ -527,6 +605,9 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFinanceExpensesRoute: typeof AuthenticatedFinanceExpensesRoute
   AuthenticatedFinancePaymentsRoute: typeof AuthenticatedFinancePaymentsRoute
   AuthenticatedFinancePnlRoute: typeof AuthenticatedFinancePnlRoute
+  AuthenticatedLeadsIdRoute: typeof AuthenticatedLeadsIdRoute
+  AuthenticatedClientsIndexRoute: typeof AuthenticatedClientsIndexRoute
+  AuthenticatedLeadsIndexRoute: typeof AuthenticatedLeadsIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -548,6 +629,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminSubscriptionPlansRoute:
     AuthenticatedAdminSubscriptionPlansRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
+  AuthenticatedClientsIdRoute: AuthenticatedClientsIdRoute,
   AuthenticatedClientsGroupsRoute: AuthenticatedClientsGroupsRoute,
   AuthenticatedFinanceCashFlowRoute: AuthenticatedFinanceCashFlowRoute,
   AuthenticatedFinanceChargesRoute: AuthenticatedFinanceChargesRoute,
@@ -555,6 +637,9 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFinanceExpensesRoute: AuthenticatedFinanceExpensesRoute,
   AuthenticatedFinancePaymentsRoute: AuthenticatedFinancePaymentsRoute,
   AuthenticatedFinancePnlRoute: AuthenticatedFinancePnlRoute,
+  AuthenticatedLeadsIdRoute: AuthenticatedLeadsIdRoute,
+  AuthenticatedClientsIndexRoute: AuthenticatedClientsIndexRoute,
+  AuthenticatedLeadsIndexRoute: AuthenticatedLeadsIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

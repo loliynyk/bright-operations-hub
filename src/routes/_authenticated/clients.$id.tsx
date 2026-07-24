@@ -202,7 +202,7 @@ function ContractCard({ contract, lookups, attachments }: any) {
           <p className="font-semibold">№ {contract.number}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={merged.status} onValueChange={(v) => save.mutate(undefined as any) || setPatch({ ...patch, status: v })}>
+          <Select value={merged.status} onValueChange={(v) => setPatch({ ...patch, status: v })}>
             <SelectTrigger className="h-9 w-40"><SelectValue /></SelectTrigger>
             <SelectContent>{CONTRACT_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
           </Select>
