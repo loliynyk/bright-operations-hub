@@ -12,14 +12,29 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
+import { Route as AuthenticatedStaffRouteImport } from './routes/_authenticated/staff'
+import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated/overview'
 import { Route as AuthenticatedLeadsRouteImport } from './routes/_authenticated/leads'
-import { Route as AuthenticatedFinanceRouteImport } from './routes/_authenticated/finance'
-import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as AuthenticatedContractsRouteImport } from './routes/_authenticated/contracts'
 import { Route as AuthenticatedClientsRouteImport } from './routes/_authenticated/clients'
-import { Route as AuthenticatedBranchesRouteImport } from './routes/_authenticated/branches'
-import { Route as AuthenticatedAttendanceRouteImport } from './routes/_authenticated/attendance'
+import { Route as AuthenticatedFinancePnlRouteImport } from './routes/_authenticated/finance.pnl'
+import { Route as AuthenticatedFinancePaymentsRouteImport } from './routes/_authenticated/finance.payments'
+import { Route as AuthenticatedFinanceExpensesRouteImport } from './routes/_authenticated/finance.expenses'
+import { Route as AuthenticatedFinanceContractsRouteImport } from './routes/_authenticated/finance.contracts'
+import { Route as AuthenticatedFinanceChargesRouteImport } from './routes/_authenticated/finance.charges'
+import { Route as AuthenticatedFinanceCashFlowRouteImport } from './routes/_authenticated/finance.cash-flow'
+import { Route as AuthenticatedClientsGroupsRouteImport } from './routes/_authenticated/clients.groups'
+import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
+import { Route as AuthenticatedAdminSubscriptionPlansRouteImport } from './routes/_authenticated/admin.subscription-plans'
+import { Route as AuthenticatedAdminRolesRouteImport } from './routes/_authenticated/admin.roles'
+import { Route as AuthenticatedAdminPriceListsRouteImport } from './routes/_authenticated/admin.price-lists'
+import { Route as AuthenticatedAdminLeadSourcesRouteImport } from './routes/_authenticated/admin.lead-sources'
+import { Route as AuthenticatedAdminIncomeCategoriesRouteImport } from './routes/_authenticated/admin.income-categories'
+import { Route as AuthenticatedAdminGroupsRouteImport } from './routes/_authenticated/admin.groups'
+import { Route as AuthenticatedAdminExpenseCategoriesRouteImport } from './routes/_authenticated/admin.expense-categories'
+import { Route as AuthenticatedAdminEmailTemplatesRouteImport } from './routes/_authenticated/admin.email-templates'
+import { Route as AuthenticatedAdminDiscountsRouteImport } from './routes/_authenticated/admin.discounts'
+import { Route as AuthenticatedAdminContractTemplatesRouteImport } from './routes/_authenticated/admin.contract-templates'
+import { Route as AuthenticatedAdminBranchesRouteImport } from './routes/_authenticated/admin.branches'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -35,9 +50,14 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
+const AuthenticatedStaffRoute = AuthenticatedStaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedOverviewRoute = AuthenticatedOverviewRouteImport.update({
+  id: '/overview',
+  path: '/overview',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedLeadsRoute = AuthenticatedLeadsRouteImport.update({
@@ -45,113 +65,289 @@ const AuthenticatedLeadsRoute = AuthenticatedLeadsRouteImport.update({
   path: '/leads',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedFinanceRoute = AuthenticatedFinanceRouteImport.update({
-  id: '/finance',
-  path: '/finance',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedContractsRoute = AuthenticatedContractsRouteImport.update({
-  id: '/contracts',
-  path: '/contracts',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedClientsRoute = AuthenticatedClientsRouteImport.update({
   id: '/clients',
   path: '/clients',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedBranchesRoute = AuthenticatedBranchesRouteImport.update({
-  id: '/branches',
-  path: '/branches',
+const AuthenticatedFinancePnlRoute = AuthenticatedFinancePnlRouteImport.update({
+  id: '/finance/pnl',
+  path: '/finance/pnl',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedAttendanceRoute = AuthenticatedAttendanceRouteImport.update({
-  id: '/attendance',
-  path: '/attendance',
+const AuthenticatedFinancePaymentsRoute =
+  AuthenticatedFinancePaymentsRouteImport.update({
+    id: '/finance/payments',
+    path: '/finance/payments',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedFinanceExpensesRoute =
+  AuthenticatedFinanceExpensesRouteImport.update({
+    id: '/finance/expenses',
+    path: '/finance/expenses',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedFinanceContractsRoute =
+  AuthenticatedFinanceContractsRouteImport.update({
+    id: '/finance/contracts',
+    path: '/finance/contracts',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedFinanceChargesRoute =
+  AuthenticatedFinanceChargesRouteImport.update({
+    id: '/finance/charges',
+    path: '/finance/charges',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedFinanceCashFlowRoute =
+  AuthenticatedFinanceCashFlowRouteImport.update({
+    id: '/finance/cash-flow',
+    path: '/finance/cash-flow',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedClientsGroupsRoute =
+  AuthenticatedClientsGroupsRouteImport.update({
+    id: '/groups',
+    path: '/groups',
+    getParentRoute: () => AuthenticatedClientsRoute,
+  } as any)
+const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminSubscriptionPlansRoute =
+  AuthenticatedAdminSubscriptionPlansRouteImport.update({
+    id: '/admin/subscription-plans',
+    path: '/admin/subscription-plans',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminRolesRoute = AuthenticatedAdminRolesRouteImport.update({
+  id: '/admin/roles',
+  path: '/admin/roles',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAdminPriceListsRoute =
+  AuthenticatedAdminPriceListsRouteImport.update({
+    id: '/admin/price-lists',
+    path: '/admin/price-lists',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminLeadSourcesRoute =
+  AuthenticatedAdminLeadSourcesRouteImport.update({
+    id: '/admin/lead-sources',
+    path: '/admin/lead-sources',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminIncomeCategoriesRoute =
+  AuthenticatedAdminIncomeCategoriesRouteImport.update({
+    id: '/admin/income-categories',
+    path: '/admin/income-categories',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminGroupsRoute =
+  AuthenticatedAdminGroupsRouteImport.update({
+    id: '/admin/groups',
+    path: '/admin/groups',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminExpenseCategoriesRoute =
+  AuthenticatedAdminExpenseCategoriesRouteImport.update({
+    id: '/admin/expense-categories',
+    path: '/admin/expense-categories',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminEmailTemplatesRoute =
+  AuthenticatedAdminEmailTemplatesRouteImport.update({
+    id: '/admin/email-templates',
+    path: '/admin/email-templates',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminDiscountsRoute =
+  AuthenticatedAdminDiscountsRouteImport.update({
+    id: '/admin/discounts',
+    path: '/admin/discounts',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminContractTemplatesRoute =
+  AuthenticatedAdminContractTemplatesRouteImport.update({
+    id: '/admin/contract-templates',
+    path: '/admin/contract-templates',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminBranchesRoute =
+  AuthenticatedAdminBranchesRouteImport.update({
+    id: '/admin/branches',
+    path: '/admin/branches',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/attendance': typeof AuthenticatedAttendanceRoute
-  '/branches': typeof AuthenticatedBranchesRoute
-  '/clients': typeof AuthenticatedClientsRoute
-  '/contracts': typeof AuthenticatedContractsRoute
-  '/dashboard': typeof AuthenticatedDashboardRoute
-  '/finance': typeof AuthenticatedFinanceRoute
+  '/clients': typeof AuthenticatedClientsRouteWithChildren
   '/leads': typeof AuthenticatedLeadsRoute
-  '/reports': typeof AuthenticatedReportsRoute
+  '/overview': typeof AuthenticatedOverviewRoute
+  '/staff': typeof AuthenticatedStaffRoute
+  '/admin/branches': typeof AuthenticatedAdminBranchesRoute
+  '/admin/contract-templates': typeof AuthenticatedAdminContractTemplatesRoute
+  '/admin/discounts': typeof AuthenticatedAdminDiscountsRoute
+  '/admin/email-templates': typeof AuthenticatedAdminEmailTemplatesRoute
+  '/admin/expense-categories': typeof AuthenticatedAdminExpenseCategoriesRoute
+  '/admin/groups': typeof AuthenticatedAdminGroupsRoute
+  '/admin/income-categories': typeof AuthenticatedAdminIncomeCategoriesRoute
+  '/admin/lead-sources': typeof AuthenticatedAdminLeadSourcesRoute
+  '/admin/price-lists': typeof AuthenticatedAdminPriceListsRoute
+  '/admin/roles': typeof AuthenticatedAdminRolesRoute
+  '/admin/subscription-plans': typeof AuthenticatedAdminSubscriptionPlansRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/clients/groups': typeof AuthenticatedClientsGroupsRoute
+  '/finance/cash-flow': typeof AuthenticatedFinanceCashFlowRoute
+  '/finance/charges': typeof AuthenticatedFinanceChargesRoute
+  '/finance/contracts': typeof AuthenticatedFinanceContractsRoute
+  '/finance/expenses': typeof AuthenticatedFinanceExpensesRoute
+  '/finance/payments': typeof AuthenticatedFinancePaymentsRoute
+  '/finance/pnl': typeof AuthenticatedFinancePnlRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/attendance': typeof AuthenticatedAttendanceRoute
-  '/branches': typeof AuthenticatedBranchesRoute
-  '/clients': typeof AuthenticatedClientsRoute
-  '/contracts': typeof AuthenticatedContractsRoute
-  '/dashboard': typeof AuthenticatedDashboardRoute
-  '/finance': typeof AuthenticatedFinanceRoute
+  '/clients': typeof AuthenticatedClientsRouteWithChildren
   '/leads': typeof AuthenticatedLeadsRoute
-  '/reports': typeof AuthenticatedReportsRoute
+  '/overview': typeof AuthenticatedOverviewRoute
+  '/staff': typeof AuthenticatedStaffRoute
+  '/admin/branches': typeof AuthenticatedAdminBranchesRoute
+  '/admin/contract-templates': typeof AuthenticatedAdminContractTemplatesRoute
+  '/admin/discounts': typeof AuthenticatedAdminDiscountsRoute
+  '/admin/email-templates': typeof AuthenticatedAdminEmailTemplatesRoute
+  '/admin/expense-categories': typeof AuthenticatedAdminExpenseCategoriesRoute
+  '/admin/groups': typeof AuthenticatedAdminGroupsRoute
+  '/admin/income-categories': typeof AuthenticatedAdminIncomeCategoriesRoute
+  '/admin/lead-sources': typeof AuthenticatedAdminLeadSourcesRoute
+  '/admin/price-lists': typeof AuthenticatedAdminPriceListsRoute
+  '/admin/roles': typeof AuthenticatedAdminRolesRoute
+  '/admin/subscription-plans': typeof AuthenticatedAdminSubscriptionPlansRoute
+  '/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/clients/groups': typeof AuthenticatedClientsGroupsRoute
+  '/finance/cash-flow': typeof AuthenticatedFinanceCashFlowRoute
+  '/finance/charges': typeof AuthenticatedFinanceChargesRoute
+  '/finance/contracts': typeof AuthenticatedFinanceContractsRoute
+  '/finance/expenses': typeof AuthenticatedFinanceExpensesRoute
+  '/finance/payments': typeof AuthenticatedFinancePaymentsRoute
+  '/finance/pnl': typeof AuthenticatedFinancePnlRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/_authenticated/attendance': typeof AuthenticatedAttendanceRoute
-  '/_authenticated/branches': typeof AuthenticatedBranchesRoute
-  '/_authenticated/clients': typeof AuthenticatedClientsRoute
-  '/_authenticated/contracts': typeof AuthenticatedContractsRoute
-  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
-  '/_authenticated/finance': typeof AuthenticatedFinanceRoute
+  '/_authenticated/clients': typeof AuthenticatedClientsRouteWithChildren
   '/_authenticated/leads': typeof AuthenticatedLeadsRoute
-  '/_authenticated/reports': typeof AuthenticatedReportsRoute
+  '/_authenticated/overview': typeof AuthenticatedOverviewRoute
+  '/_authenticated/staff': typeof AuthenticatedStaffRoute
+  '/_authenticated/admin/branches': typeof AuthenticatedAdminBranchesRoute
+  '/_authenticated/admin/contract-templates': typeof AuthenticatedAdminContractTemplatesRoute
+  '/_authenticated/admin/discounts': typeof AuthenticatedAdminDiscountsRoute
+  '/_authenticated/admin/email-templates': typeof AuthenticatedAdminEmailTemplatesRoute
+  '/_authenticated/admin/expense-categories': typeof AuthenticatedAdminExpenseCategoriesRoute
+  '/_authenticated/admin/groups': typeof AuthenticatedAdminGroupsRoute
+  '/_authenticated/admin/income-categories': typeof AuthenticatedAdminIncomeCategoriesRoute
+  '/_authenticated/admin/lead-sources': typeof AuthenticatedAdminLeadSourcesRoute
+  '/_authenticated/admin/price-lists': typeof AuthenticatedAdminPriceListsRoute
+  '/_authenticated/admin/roles': typeof AuthenticatedAdminRolesRoute
+  '/_authenticated/admin/subscription-plans': typeof AuthenticatedAdminSubscriptionPlansRoute
+  '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
+  '/_authenticated/clients/groups': typeof AuthenticatedClientsGroupsRoute
+  '/_authenticated/finance/cash-flow': typeof AuthenticatedFinanceCashFlowRoute
+  '/_authenticated/finance/charges': typeof AuthenticatedFinanceChargesRoute
+  '/_authenticated/finance/contracts': typeof AuthenticatedFinanceContractsRoute
+  '/_authenticated/finance/expenses': typeof AuthenticatedFinanceExpensesRoute
+  '/_authenticated/finance/payments': typeof AuthenticatedFinancePaymentsRoute
+  '/_authenticated/finance/pnl': typeof AuthenticatedFinancePnlRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/auth'
-    | '/attendance'
-    | '/branches'
     | '/clients'
-    | '/contracts'
-    | '/dashboard'
-    | '/finance'
     | '/leads'
-    | '/reports'
+    | '/overview'
+    | '/staff'
+    | '/admin/branches'
+    | '/admin/contract-templates'
+    | '/admin/discounts'
+    | '/admin/email-templates'
+    | '/admin/expense-categories'
+    | '/admin/groups'
+    | '/admin/income-categories'
+    | '/admin/lead-sources'
+    | '/admin/price-lists'
+    | '/admin/roles'
+    | '/admin/subscription-plans'
+    | '/admin/users'
+    | '/clients/groups'
+    | '/finance/cash-flow'
+    | '/finance/charges'
+    | '/finance/contracts'
+    | '/finance/expenses'
+    | '/finance/payments'
+    | '/finance/pnl'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
-    | '/attendance'
-    | '/branches'
     | '/clients'
-    | '/contracts'
-    | '/dashboard'
-    | '/finance'
     | '/leads'
-    | '/reports'
+    | '/overview'
+    | '/staff'
+    | '/admin/branches'
+    | '/admin/contract-templates'
+    | '/admin/discounts'
+    | '/admin/email-templates'
+    | '/admin/expense-categories'
+    | '/admin/groups'
+    | '/admin/income-categories'
+    | '/admin/lead-sources'
+    | '/admin/price-lists'
+    | '/admin/roles'
+    | '/admin/subscription-plans'
+    | '/admin/users'
+    | '/clients/groups'
+    | '/finance/cash-flow'
+    | '/finance/charges'
+    | '/finance/contracts'
+    | '/finance/expenses'
+    | '/finance/payments'
+    | '/finance/pnl'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
-    | '/_authenticated/attendance'
-    | '/_authenticated/branches'
     | '/_authenticated/clients'
-    | '/_authenticated/contracts'
-    | '/_authenticated/dashboard'
-    | '/_authenticated/finance'
     | '/_authenticated/leads'
-    | '/_authenticated/reports'
+    | '/_authenticated/overview'
+    | '/_authenticated/staff'
+    | '/_authenticated/admin/branches'
+    | '/_authenticated/admin/contract-templates'
+    | '/_authenticated/admin/discounts'
+    | '/_authenticated/admin/email-templates'
+    | '/_authenticated/admin/expense-categories'
+    | '/_authenticated/admin/groups'
+    | '/_authenticated/admin/income-categories'
+    | '/_authenticated/admin/lead-sources'
+    | '/_authenticated/admin/price-lists'
+    | '/_authenticated/admin/roles'
+    | '/_authenticated/admin/subscription-plans'
+    | '/_authenticated/admin/users'
+    | '/_authenticated/clients/groups'
+    | '/_authenticated/finance/cash-flow'
+    | '/_authenticated/finance/charges'
+    | '/_authenticated/finance/contracts'
+    | '/_authenticated/finance/expenses'
+    | '/_authenticated/finance/payments'
+    | '/_authenticated/finance/pnl'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -183,11 +379,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/reports': {
-      id: '/_authenticated/reports'
-      path: '/reports'
-      fullPath: '/reports'
-      preLoaderRoute: typeof AuthenticatedReportsRouteImport
+    '/_authenticated/staff': {
+      id: '/_authenticated/staff'
+      path: '/staff'
+      fullPath: '/staff'
+      preLoaderRoute: typeof AuthenticatedStaffRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/overview': {
+      id: '/_authenticated/overview'
+      path: '/overview'
+      fullPath: '/overview'
+      preLoaderRoute: typeof AuthenticatedOverviewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/leads': {
@@ -197,27 +400,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLeadsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/finance': {
-      id: '/_authenticated/finance'
-      path: '/finance'
-      fullPath: '/finance'
-      preLoaderRoute: typeof AuthenticatedFinanceRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/dashboard': {
-      id: '/_authenticated/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/contracts': {
-      id: '/_authenticated/contracts'
-      path: '/contracts'
-      fullPath: '/contracts'
-      preLoaderRoute: typeof AuthenticatedContractsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/clients': {
       id: '/_authenticated/clients'
       path: '/clients'
@@ -225,43 +407,205 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedClientsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/branches': {
-      id: '/_authenticated/branches'
-      path: '/branches'
-      fullPath: '/branches'
-      preLoaderRoute: typeof AuthenticatedBranchesRouteImport
+    '/_authenticated/finance/pnl': {
+      id: '/_authenticated/finance/pnl'
+      path: '/finance/pnl'
+      fullPath: '/finance/pnl'
+      preLoaderRoute: typeof AuthenticatedFinancePnlRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/attendance': {
-      id: '/_authenticated/attendance'
-      path: '/attendance'
-      fullPath: '/attendance'
-      preLoaderRoute: typeof AuthenticatedAttendanceRouteImport
+    '/_authenticated/finance/payments': {
+      id: '/_authenticated/finance/payments'
+      path: '/finance/payments'
+      fullPath: '/finance/payments'
+      preLoaderRoute: typeof AuthenticatedFinancePaymentsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/finance/expenses': {
+      id: '/_authenticated/finance/expenses'
+      path: '/finance/expenses'
+      fullPath: '/finance/expenses'
+      preLoaderRoute: typeof AuthenticatedFinanceExpensesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/finance/contracts': {
+      id: '/_authenticated/finance/contracts'
+      path: '/finance/contracts'
+      fullPath: '/finance/contracts'
+      preLoaderRoute: typeof AuthenticatedFinanceContractsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/finance/charges': {
+      id: '/_authenticated/finance/charges'
+      path: '/finance/charges'
+      fullPath: '/finance/charges'
+      preLoaderRoute: typeof AuthenticatedFinanceChargesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/finance/cash-flow': {
+      id: '/_authenticated/finance/cash-flow'
+      path: '/finance/cash-flow'
+      fullPath: '/finance/cash-flow'
+      preLoaderRoute: typeof AuthenticatedFinanceCashFlowRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/clients/groups': {
+      id: '/_authenticated/clients/groups'
+      path: '/groups'
+      fullPath: '/clients/groups'
+      preLoaderRoute: typeof AuthenticatedClientsGroupsRouteImport
+      parentRoute: typeof AuthenticatedClientsRoute
+    }
+    '/_authenticated/admin/users': {
+      id: '/_authenticated/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AuthenticatedAdminUsersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/subscription-plans': {
+      id: '/_authenticated/admin/subscription-plans'
+      path: '/admin/subscription-plans'
+      fullPath: '/admin/subscription-plans'
+      preLoaderRoute: typeof AuthenticatedAdminSubscriptionPlansRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/roles': {
+      id: '/_authenticated/admin/roles'
+      path: '/admin/roles'
+      fullPath: '/admin/roles'
+      preLoaderRoute: typeof AuthenticatedAdminRolesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/price-lists': {
+      id: '/_authenticated/admin/price-lists'
+      path: '/admin/price-lists'
+      fullPath: '/admin/price-lists'
+      preLoaderRoute: typeof AuthenticatedAdminPriceListsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/lead-sources': {
+      id: '/_authenticated/admin/lead-sources'
+      path: '/admin/lead-sources'
+      fullPath: '/admin/lead-sources'
+      preLoaderRoute: typeof AuthenticatedAdminLeadSourcesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/income-categories': {
+      id: '/_authenticated/admin/income-categories'
+      path: '/admin/income-categories'
+      fullPath: '/admin/income-categories'
+      preLoaderRoute: typeof AuthenticatedAdminIncomeCategoriesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/groups': {
+      id: '/_authenticated/admin/groups'
+      path: '/admin/groups'
+      fullPath: '/admin/groups'
+      preLoaderRoute: typeof AuthenticatedAdminGroupsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/expense-categories': {
+      id: '/_authenticated/admin/expense-categories'
+      path: '/admin/expense-categories'
+      fullPath: '/admin/expense-categories'
+      preLoaderRoute: typeof AuthenticatedAdminExpenseCategoriesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/email-templates': {
+      id: '/_authenticated/admin/email-templates'
+      path: '/admin/email-templates'
+      fullPath: '/admin/email-templates'
+      preLoaderRoute: typeof AuthenticatedAdminEmailTemplatesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/discounts': {
+      id: '/_authenticated/admin/discounts'
+      path: '/admin/discounts'
+      fullPath: '/admin/discounts'
+      preLoaderRoute: typeof AuthenticatedAdminDiscountsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/contract-templates': {
+      id: '/_authenticated/admin/contract-templates'
+      path: '/admin/contract-templates'
+      fullPath: '/admin/contract-templates'
+      preLoaderRoute: typeof AuthenticatedAdminContractTemplatesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/branches': {
+      id: '/_authenticated/admin/branches'
+      path: '/admin/branches'
+      fullPath: '/admin/branches'
+      preLoaderRoute: typeof AuthenticatedAdminBranchesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
 
+interface AuthenticatedClientsRouteChildren {
+  AuthenticatedClientsGroupsRoute: typeof AuthenticatedClientsGroupsRoute
+}
+
+const AuthenticatedClientsRouteChildren: AuthenticatedClientsRouteChildren = {
+  AuthenticatedClientsGroupsRoute: AuthenticatedClientsGroupsRoute,
+}
+
+const AuthenticatedClientsRouteWithChildren =
+  AuthenticatedClientsRoute._addFileChildren(AuthenticatedClientsRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedAttendanceRoute: typeof AuthenticatedAttendanceRoute
-  AuthenticatedBranchesRoute: typeof AuthenticatedBranchesRoute
-  AuthenticatedClientsRoute: typeof AuthenticatedClientsRoute
-  AuthenticatedContractsRoute: typeof AuthenticatedContractsRoute
-  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedFinanceRoute: typeof AuthenticatedFinanceRoute
+  AuthenticatedClientsRoute: typeof AuthenticatedClientsRouteWithChildren
   AuthenticatedLeadsRoute: typeof AuthenticatedLeadsRoute
-  AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
+  AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
+  AuthenticatedStaffRoute: typeof AuthenticatedStaffRoute
+  AuthenticatedAdminBranchesRoute: typeof AuthenticatedAdminBranchesRoute
+  AuthenticatedAdminContractTemplatesRoute: typeof AuthenticatedAdminContractTemplatesRoute
+  AuthenticatedAdminDiscountsRoute: typeof AuthenticatedAdminDiscountsRoute
+  AuthenticatedAdminEmailTemplatesRoute: typeof AuthenticatedAdminEmailTemplatesRoute
+  AuthenticatedAdminExpenseCategoriesRoute: typeof AuthenticatedAdminExpenseCategoriesRoute
+  AuthenticatedAdminGroupsRoute: typeof AuthenticatedAdminGroupsRoute
+  AuthenticatedAdminIncomeCategoriesRoute: typeof AuthenticatedAdminIncomeCategoriesRoute
+  AuthenticatedAdminLeadSourcesRoute: typeof AuthenticatedAdminLeadSourcesRoute
+  AuthenticatedAdminPriceListsRoute: typeof AuthenticatedAdminPriceListsRoute
+  AuthenticatedAdminRolesRoute: typeof AuthenticatedAdminRolesRoute
+  AuthenticatedAdminSubscriptionPlansRoute: typeof AuthenticatedAdminSubscriptionPlansRoute
+  AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
+  AuthenticatedFinanceCashFlowRoute: typeof AuthenticatedFinanceCashFlowRoute
+  AuthenticatedFinanceChargesRoute: typeof AuthenticatedFinanceChargesRoute
+  AuthenticatedFinanceContractsRoute: typeof AuthenticatedFinanceContractsRoute
+  AuthenticatedFinanceExpensesRoute: typeof AuthenticatedFinanceExpensesRoute
+  AuthenticatedFinancePaymentsRoute: typeof AuthenticatedFinancePaymentsRoute
+  AuthenticatedFinancePnlRoute: typeof AuthenticatedFinancePnlRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedAttendanceRoute: AuthenticatedAttendanceRoute,
-  AuthenticatedBranchesRoute: AuthenticatedBranchesRoute,
-  AuthenticatedClientsRoute: AuthenticatedClientsRoute,
-  AuthenticatedContractsRoute: AuthenticatedContractsRoute,
-  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
-  AuthenticatedFinanceRoute: AuthenticatedFinanceRoute,
+  AuthenticatedClientsRoute: AuthenticatedClientsRouteWithChildren,
   AuthenticatedLeadsRoute: AuthenticatedLeadsRoute,
-  AuthenticatedReportsRoute: AuthenticatedReportsRoute,
+  AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,
+  AuthenticatedStaffRoute: AuthenticatedStaffRoute,
+  AuthenticatedAdminBranchesRoute: AuthenticatedAdminBranchesRoute,
+  AuthenticatedAdminContractTemplatesRoute:
+    AuthenticatedAdminContractTemplatesRoute,
+  AuthenticatedAdminDiscountsRoute: AuthenticatedAdminDiscountsRoute,
+  AuthenticatedAdminEmailTemplatesRoute: AuthenticatedAdminEmailTemplatesRoute,
+  AuthenticatedAdminExpenseCategoriesRoute:
+    AuthenticatedAdminExpenseCategoriesRoute,
+  AuthenticatedAdminGroupsRoute: AuthenticatedAdminGroupsRoute,
+  AuthenticatedAdminIncomeCategoriesRoute:
+    AuthenticatedAdminIncomeCategoriesRoute,
+  AuthenticatedAdminLeadSourcesRoute: AuthenticatedAdminLeadSourcesRoute,
+  AuthenticatedAdminPriceListsRoute: AuthenticatedAdminPriceListsRoute,
+  AuthenticatedAdminRolesRoute: AuthenticatedAdminRolesRoute,
+  AuthenticatedAdminSubscriptionPlansRoute:
+    AuthenticatedAdminSubscriptionPlansRoute,
+  AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
+  AuthenticatedFinanceCashFlowRoute: AuthenticatedFinanceCashFlowRoute,
+  AuthenticatedFinanceChargesRoute: AuthenticatedFinanceChargesRoute,
+  AuthenticatedFinanceContractsRoute: AuthenticatedFinanceContractsRoute,
+  AuthenticatedFinanceExpensesRoute: AuthenticatedFinanceExpensesRoute,
+  AuthenticatedFinancePaymentsRoute: AuthenticatedFinancePaymentsRoute,
+  AuthenticatedFinancePnlRoute: AuthenticatedFinancePnlRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -275,3 +619,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
