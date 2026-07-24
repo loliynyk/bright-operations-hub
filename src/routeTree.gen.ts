@@ -14,8 +14,6 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedStaffRouteImport } from './routes/_authenticated/staff'
 import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticated/overview'
-import { Route as AuthenticatedLeadsRouteImport } from './routes/_authenticated/leads'
-import { Route as AuthenticatedClientsRouteImport } from './routes/_authenticated/clients'
 import { Route as AuthenticatedFinancePnlRouteImport } from './routes/_authenticated/finance.pnl'
 import { Route as AuthenticatedFinancePaymentsRouteImport } from './routes/_authenticated/finance.payments'
 import { Route as AuthenticatedFinanceExpensesRouteImport } from './routes/_authenticated/finance.expenses'
@@ -60,16 +58,6 @@ const AuthenticatedOverviewRoute = AuthenticatedOverviewRouteImport.update({
   path: '/overview',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedLeadsRoute = AuthenticatedLeadsRouteImport.update({
-  id: '/leads',
-  path: '/leads',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedClientsRoute = AuthenticatedClientsRouteImport.update({
-  id: '/clients',
-  path: '/clients',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedFinancePnlRoute = AuthenticatedFinancePnlRouteImport.update({
   id: '/finance/pnl',
   path: '/finance/pnl',
@@ -107,9 +95,9 @@ const AuthenticatedFinanceCashFlowRoute =
   } as any)
 const AuthenticatedClientsGroupsRoute =
   AuthenticatedClientsGroupsRouteImport.update({
-    id: '/groups',
-    path: '/groups',
-    getParentRoute: () => AuthenticatedClientsRoute,
+    id: '/clients/groups',
+    path: '/clients/groups',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAdminUsersRoute = AuthenticatedAdminUsersRouteImport.update({
   id: '/admin/users',
@@ -185,8 +173,6 @@ const AuthenticatedAdminBranchesRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/clients': typeof AuthenticatedClientsRouteWithChildren
-  '/leads': typeof AuthenticatedLeadsRoute
   '/overview': typeof AuthenticatedOverviewRoute
   '/staff': typeof AuthenticatedStaffRoute
   '/admin/branches': typeof AuthenticatedAdminBranchesRoute
@@ -212,8 +198,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/clients': typeof AuthenticatedClientsRouteWithChildren
-  '/leads': typeof AuthenticatedLeadsRoute
   '/overview': typeof AuthenticatedOverviewRoute
   '/staff': typeof AuthenticatedStaffRoute
   '/admin/branches': typeof AuthenticatedAdminBranchesRoute
@@ -241,8 +225,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/_authenticated/clients': typeof AuthenticatedClientsRouteWithChildren
-  '/_authenticated/leads': typeof AuthenticatedLeadsRoute
   '/_authenticated/overview': typeof AuthenticatedOverviewRoute
   '/_authenticated/staff': typeof AuthenticatedStaffRoute
   '/_authenticated/admin/branches': typeof AuthenticatedAdminBranchesRoute
@@ -270,8 +252,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
-    | '/clients'
-    | '/leads'
     | '/overview'
     | '/staff'
     | '/admin/branches'
@@ -297,8 +277,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
-    | '/clients'
-    | '/leads'
     | '/overview'
     | '/staff'
     | '/admin/branches'
@@ -325,8 +303,6 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
-    | '/_authenticated/clients'
-    | '/_authenticated/leads'
     | '/_authenticated/overview'
     | '/_authenticated/staff'
     | '/_authenticated/admin/branches'
@@ -393,20 +369,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOverviewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/leads': {
-      id: '/_authenticated/leads'
-      path: '/leads'
-      fullPath: '/leads'
-      preLoaderRoute: typeof AuthenticatedLeadsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/clients': {
-      id: '/_authenticated/clients'
-      path: '/clients'
-      fullPath: '/clients'
-      preLoaderRoute: typeof AuthenticatedClientsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/finance/pnl': {
       id: '/_authenticated/finance/pnl'
       path: '/finance/pnl'
@@ -451,10 +413,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/clients/groups': {
       id: '/_authenticated/clients/groups'
-      path: '/groups'
+      path: '/clients/groups'
       fullPath: '/clients/groups'
       preLoaderRoute: typeof AuthenticatedClientsGroupsRouteImport
-      parentRoute: typeof AuthenticatedClientsRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/users': {
       id: '/_authenticated/admin/users'
@@ -543,20 +505,7 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AuthenticatedClientsRouteChildren {
-  AuthenticatedClientsGroupsRoute: typeof AuthenticatedClientsGroupsRoute
-}
-
-const AuthenticatedClientsRouteChildren: AuthenticatedClientsRouteChildren = {
-  AuthenticatedClientsGroupsRoute: AuthenticatedClientsGroupsRoute,
-}
-
-const AuthenticatedClientsRouteWithChildren =
-  AuthenticatedClientsRoute._addFileChildren(AuthenticatedClientsRouteChildren)
-
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedClientsRoute: typeof AuthenticatedClientsRouteWithChildren
-  AuthenticatedLeadsRoute: typeof AuthenticatedLeadsRoute
   AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
   AuthenticatedStaffRoute: typeof AuthenticatedStaffRoute
   AuthenticatedAdminBranchesRoute: typeof AuthenticatedAdminBranchesRoute
@@ -571,6 +520,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRolesRoute: typeof AuthenticatedAdminRolesRoute
   AuthenticatedAdminSubscriptionPlansRoute: typeof AuthenticatedAdminSubscriptionPlansRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
+  AuthenticatedClientsGroupsRoute: typeof AuthenticatedClientsGroupsRoute
   AuthenticatedFinanceCashFlowRoute: typeof AuthenticatedFinanceCashFlowRoute
   AuthenticatedFinanceChargesRoute: typeof AuthenticatedFinanceChargesRoute
   AuthenticatedFinanceContractsRoute: typeof AuthenticatedFinanceContractsRoute
@@ -580,8 +530,6 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedClientsRoute: AuthenticatedClientsRouteWithChildren,
-  AuthenticatedLeadsRoute: AuthenticatedLeadsRoute,
   AuthenticatedOverviewRoute: AuthenticatedOverviewRoute,
   AuthenticatedStaffRoute: AuthenticatedStaffRoute,
   AuthenticatedAdminBranchesRoute: AuthenticatedAdminBranchesRoute,
@@ -600,6 +548,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminSubscriptionPlansRoute:
     AuthenticatedAdminSubscriptionPlansRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
+  AuthenticatedClientsGroupsRoute: AuthenticatedClientsGroupsRoute,
   AuthenticatedFinanceCashFlowRoute: AuthenticatedFinanceCashFlowRoute,
   AuthenticatedFinanceChargesRoute: AuthenticatedFinanceChargesRoute,
   AuthenticatedFinanceContractsRoute: AuthenticatedFinanceContractsRoute,
