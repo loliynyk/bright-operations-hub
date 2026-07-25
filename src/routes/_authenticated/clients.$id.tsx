@@ -173,23 +173,89 @@ function ChildrenTab({ clientId, branchId, children, lookups }: any) {
   );
 }
 
-function ContractCard({ contract, lookups, attachments }: any) {
+function ContractCard({ contract, lookups, attachments, branchId }: any) {
   const qc = useQueryClient();
   const updateFn = useServerFn(updateContract);
+  const confirmFn = useServerFn(confirmContract);
   const pdfFn = useServerFn(generateContractPdf);
+  const chargesFn = useServerFn(generateInitialCharges);
+  const urlFn = useServerFn(getContractPdfUrl);
+
   const [patch, setPatch] = useState<any>({});
   const merged = { ...contract, ...patch };
   const attachment = attachments.find((a: any) => a.contract_id === contract.id);
+  const isDraft = contract.status === "draft";
+  const isConfirmed = contract.status === "confirmed" || contract.status === "generated" || contract.status === "sent" || contract.status === "signed" || contract.status === "completed";
+  const hasPdf = !!contract.pdf_path;
 
   const save = useMutation({
-    mutationFn: () => updateFn({ data: { id: contract.id, ...patch, monthly_price: patch.monthly_price !== undefined ? Number(patch.monthly_price) : undefined, manual_discount: patch.manual_discount !== undefined ? Number(patch.manual_discount) : undefined } as any }),
+    mutationFn: () => updateFn({ data: {
+      id: contract.id, ...patch,
+      monthly_price: patch.monthly_price !== undefined ? Number(patch.monthly_price) : undefined,
+      manual_discount: patch.manual_discount !== undefined ? Number(patch.manual_discount) : undefined,
+    } as any }),
     onSuccess: () => { toast.success("Збережено"); qc.invalidateQueries({ queryKey: ["client", contract.client_id] }); setPatch({}); },
     onError: (e: any) => toast.error("Помилка", { description: e.message }),
   });
-  const genPdf = useMutation({
+
+  const confirmMut = useMutation({
+    mutationFn: () => {
+      const branch = merged.branch_id ?? branchId;
+      if (!branch) throw new Error("Не вказано філію");
+      if (!merged.service_id) throw new Error("Оберіть послугу");
+      if (!merged.plan_id) throw new Error("Оберіть тарифний план");
+      if (!merged.price_version_id) throw new Error("Оберіть версію цін");
+      if (!merged.start_date) throw new Error("Оберіть дату початку");
+      const price = Number(merged.monthly_price);
+      if (!Number.isFinite(price) || price <= 0) throw new Error("Місячна ціна має бути більше 0");
+      return confirmFn({ data: {
+        id: contract.id,
+        branch_id: branch,
+        service_id: merged.service_id,
+        plan_id: merged.plan_id,
+        price_version_id: merged.price_version_id,
+        discount_id: merged.discount_id ?? null,
+        manual_discount: Number(merged.manual_discount ?? 0),
+        monthly_price: price,
+        start_date: merged.start_date,
+        end_date: merged.end_date ?? null,
+        comment: merged.comment ?? null,
+      } as any });
+    },
+    onSuccess: async () => {
+      toast.success("Договір підтверджено");
+      setPatch({});
+      try {
+        await chargesFn({ data: { contractId: contract.id } });
+      } catch (e: any) {
+        toast.error("Не вдалося створити нарахування", { description: e.message });
+      }
+      try {
+        await pdfFn({ data: { contractId: contract.id } });
+      } catch (e: any) {
+        toast.error("Не вдалося згенерувати PDF", { description: e.message });
+      }
+      qc.invalidateQueries({ queryKey: ["client", contract.client_id] });
+    },
+    onError: (e: any) => toast.error("Не вдалося підтвердити", { description: e.message }),
+  });
+
+  const chargesRetry = useMutation({
+    mutationFn: () => chargesFn({ data: { contractId: contract.id } }),
+    onSuccess: () => { toast.success("Нарахування створено"); qc.invalidateQueries({ queryKey: ["client", contract.client_id] }); },
+    onError: (e: any) => toast.error("Помилка", { description: e.message }),
+  });
+
+  const pdfRetry = useMutation({
     mutationFn: () => pdfFn({ data: { contractId: contract.id } }),
     onSuccess: () => { toast.success("PDF згенеровано"); qc.invalidateQueries({ queryKey: ["client", contract.client_id] }); },
     onError: (e: any) => toast.error("Помилка PDF", { description: e.message }),
+  });
+
+  const openPdf = useMutation({
+    mutationFn: () => urlFn({ data: { contractId: contract.id } }),
+    onSuccess: (res: any) => { if (res?.url) window.open(res.url, "_blank", "noopener"); },
+    onError: (e: any) => toast.error("Не вдалося відкрити PDF", { description: e.message }),
   });
 
   const plans = lookups?.plans ?? [];
@@ -203,51 +269,79 @@ function ContractCard({ contract, lookups, attachments }: any) {
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Договір</p>
           <p className="font-semibold">№ {contract.number}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Select value={merged.status} onValueChange={(v) => setPatch({ ...patch, status: v })}>
-            <SelectTrigger className="h-9 w-40"><SelectValue /></SelectTrigger>
-            <SelectContent>{CONTRACT_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
-          </Select>
-          <PrimaryButton onClick={() => genPdf.mutate()} disabled={genPdf.isPending}>
-            {genPdf.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
-            Згенерувати договір
-          </PrimaryButton>
-        </div>
+        <StatusPill status={contract.status} />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Послуга">
-          <Select value={merged.service_id ?? ""} onValueChange={(v) => setPatch({ ...patch, service_id: v })}>
+      <WorkflowStatuses
+        clientCreated
+        childCreated
+        contractConfirmed={isConfirmed}
+        chargesGenerated={isConfirmed}
+        pdfGenerated={hasPdf}
+      />
+
+      <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <Field label="Послуга *">
+          <Select value={merged.service_id ?? ""} onValueChange={(v) => setPatch({ ...patch, service_id: v })} disabled={!isDraft}>
             <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
             <SelectContent>{services.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
           </Select>
         </Field>
-        <Field label="Тарифний план">
-          <Select value={merged.plan_id ?? ""} onValueChange={(v) => setPatch({ ...patch, plan_id: v, price_version_id: null })}>
+        <Field label="Тарифний план *">
+          <Select value={merged.plan_id ?? ""} onValueChange={(v) => setPatch({ ...patch, plan_id: v, price_version_id: null })} disabled={!isDraft}>
             <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
             <SelectContent>{plans.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
           </Select>
         </Field>
-        <Field label="Версія цін">
+        <Field label="Версія цін *">
           <Select value={merged.price_version_id ?? ""} onValueChange={(v) => {
             const pv = prices.find((p: any) => p.id === v);
             setPatch({ ...patch, price_version_id: v, monthly_price: pv ? Number(pv.monthly_price) : merged.monthly_price });
-          }}>
+          }} disabled={!isDraft || !merged.plan_id}>
             <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
             <SelectContent>{prices.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name} — {p.monthly_price} ₴</SelectItem>)}</SelectContent>
           </Select>
         </Field>
         <Field label="Знижка">
-          <Select value={merged.discount_id ?? ""} onValueChange={(v) => setPatch({ ...patch, discount_id: v || null })}>
+          <Select value={merged.discount_id ?? ""} onValueChange={(v) => setPatch({ ...patch, discount_id: v || null })} disabled={!isDraft}>
             <SelectTrigger><SelectValue placeholder="Без знижки" /></SelectTrigger>
             <SelectContent>{(lookups?.discounts ?? []).map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name} ({d.type === "percentage" ? `${d.value}%` : `${d.value} ₴`})</SelectItem>)}</SelectContent>
           </Select>
         </Field>
-        <Field label="Місячна ціна (₴)"><Input type="number" value={merged.monthly_price ?? 0} onChange={(e) => setPatch({ ...patch, monthly_price: e.target.value })} /></Field>
-        <Field label="Ручна знижка (₴)"><Input type="number" value={merged.manual_discount ?? 0} onChange={(e) => setPatch({ ...patch, manual_discount: e.target.value })} /></Field>
-        <Field label="Дата початку"><Input type="date" value={merged.start_date ?? ""} onChange={(e) => setPatch({ ...patch, start_date: e.target.value })} /></Field>
-        <Field label="Дата закінчення"><Input type="date" value={merged.end_date ?? ""} onChange={(e) => setPatch({ ...patch, end_date: e.target.value })} /></Field>
+        <Field label="Місячна ціна (₴) *"><Input type="number" value={merged.monthly_price ?? 0} onChange={(e) => setPatch({ ...patch, monthly_price: e.target.value })} disabled={!isDraft} /></Field>
+        <Field label="Ручна знижка (₴)"><Input type="number" value={merged.manual_discount ?? 0} onChange={(e) => setPatch({ ...patch, manual_discount: e.target.value })} disabled={!isDraft} /></Field>
+        <Field label="Дата початку *"><Input type="date" value={merged.start_date ?? ""} onChange={(e) => setPatch({ ...patch, start_date: e.target.value })} disabled={!isDraft} /></Field>
+        <Field label="Дата закінчення"><Input type="date" value={merged.end_date ?? ""} onChange={(e) => setPatch({ ...patch, end_date: e.target.value })} disabled={!isDraft} /></Field>
+        <Field label="Коментар" wide>
+          <Textarea rows={2} value={merged.comment ?? ""} onChange={(e) => setPatch({ ...patch, comment: e.target.value })} disabled={!isDraft} />
+        </Field>
       </div>
+
+      {isDraft ? (
+        <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
+          {Object.keys(patch).length > 0 ? (
+            <>
+              <Button variant="ghost" onClick={() => setPatch({})}>Скинути</Button>
+              <SecondaryButton onClick={() => save.mutate()} disabled={save.isPending}>Зберегти чернетку</SecondaryButton>
+            </>
+          ) : null}
+          <PrimaryButton onClick={() => confirmMut.mutate()} disabled={confirmMut.isPending}>
+            {confirmMut.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+            Підтвердити договір
+          </PrimaryButton>
+        </div>
+      ) : (
+        <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
+          <SecondaryButton onClick={() => chargesRetry.mutate()} disabled={chargesRetry.isPending}>
+            {chargesRetry.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+            Перегенерувати нарахування
+          </SecondaryButton>
+          <SecondaryButton onClick={() => pdfRetry.mutate()} disabled={pdfRetry.isPending}>
+            {pdfRetry.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
+            {hasPdf ? "Перегенерувати PDF" : "Згенерувати PDF"}
+          </SecondaryButton>
+        </div>
+      )}
 
       {attachment ? (
         <div className="mt-4 flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2">
@@ -256,21 +350,58 @@ function ContractCard({ contract, lookups, attachments }: any) {
             <span>{attachment.name}</span>
             <span className="text-xs text-muted-foreground">{format(new Date(attachment.created_at), "dd.MM.yyyy HH:mm")}</span>
           </div>
-          <a href={attachment.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
-            <Download className="h-3.5 w-3.5" /> Відкрити
-          </a>
-        </div>
-      ) : null}
-
-      {Object.keys(patch).length > 0 ? (
-        <div className="mt-4 flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => setPatch({})}>Скасувати</Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>Зберегти</Button>
+          <button
+            type="button"
+            onClick={() => openPdf.mutate()}
+            disabled={openPdf.isPending}
+            className="inline-flex items-center gap-1 text-sm text-primary hover:underline disabled:opacity-50"
+          >
+            {openPdf.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+            Відкрити
+          </button>
         </div>
       ) : null}
     </SectionCard>
   );
 }
+
+function StatusPill({ status }: { status: string }) {
+  const map: Record<string, { label: string; cls: string }> = {
+    draft: { label: "Чернетка", cls: "bg-muted text-muted-foreground" },
+    confirmed: { label: "Підтверджено", cls: "bg-primary/10 text-primary" },
+    generated: { label: "Згенеровано", cls: "bg-primary/10 text-primary" },
+    sent: { label: "Надіслано", cls: "bg-blue-500/10 text-blue-600" },
+    signed: { label: "Підписано", cls: "bg-emerald-500/10 text-emerald-600" },
+    cancelled: { label: "Скасовано", cls: "bg-destructive/10 text-destructive" },
+    completed: { label: "Завершено", cls: "bg-emerald-500/10 text-emerald-600" },
+  };
+  const s = map[status] ?? { label: status, cls: "bg-muted text-muted-foreground" };
+  return <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${s.cls}`}>{s.label}</span>;
+}
+
+function WorkflowStatuses(props: {
+  clientCreated: boolean; childCreated: boolean;
+  contractConfirmed: boolean; chargesGenerated: boolean; pdfGenerated: boolean;
+}) {
+  const steps: { label: string; done: boolean; pending?: boolean }[] = [
+    { label: "Клієнт створений", done: props.clientCreated },
+    { label: "Дитина створена", done: props.childCreated },
+    { label: props.contractConfirmed ? "Договір підтверджено" : "Потрібні деталі договору", done: props.contractConfirmed, pending: !props.contractConfirmed },
+    { label: "Нарахування створені", done: props.chargesGenerated },
+    { label: "PDF згенеровано", done: props.pdfGenerated },
+  ];
+  return (
+    <ol className="flex flex-wrap gap-x-4 gap-y-2 text-xs">
+      {steps.map((s, i) => (
+        <li key={i} className={`inline-flex items-center gap-1.5 ${s.done ? "text-emerald-600" : s.pending ? "text-amber-600" : "text-muted-foreground"}`}>
+          {s.done ? <CheckCircle2 className="h-3.5 w-3.5" /> : s.pending ? <AlertCircle className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
+          <span>{s.label}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 
 function Field({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
   return <div className={`grid gap-1.5 ${wide ? "md:col-span-2" : ""}`}><Label className="text-xs">{label}</Label>{children}</div>;
