@@ -53,7 +53,7 @@ export const recordPayment = createServerFn({ method: "POST" })
         .from("charges")
         .select("id, amount, paid_amount")
         .eq("client_id", data.client_id)
-        .in("status", ["pending", "partial", "overdue"])
+        .in("status", ["pending","partial","overdue"] as any)
         .order("period_month", { ascending: true });
       for (const ch of openCharges ?? []) {
         if (remaining <= 0.005) break;
@@ -239,7 +239,7 @@ export const listReceivables = createServerFn({ method: "GET" })
     let q = context.supabase
       .from("charges")
       .select("id, period_month, amount, paid_amount, status, due_date, branch_id, client_id, contract_id, clients:client_id(parent_first_name, parent_last_name), contracts:contract_id(child_id, children:child_id(first_name, last_name, group_id, groups:group_id(name)))")
-      .in("status", ["pending", "partial", "overdue"]);
+      .in("status", ["pending","partial","overdue"] as any);
     if (data.branch_id) q = q.eq("branch_id", data.branch_id);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
@@ -417,7 +417,7 @@ export const listChildrenByGroup = createServerFn({ method: "GET" })
     const [groups, children, contracts, charges] = await Promise.all([
       gq, cq,
       supabase.from("contracts").select("id, child_id, status, monthly_price, manual_discount, discount_id, start_date, end_date").in("status", ["confirmed", "generated", "sent", "signed", "draft"]),
-      supabase.from("charges").select("client_id, amount, paid_amount, status").in("status", ["pending", "partial", "overdue"]),
+      supabase.from("charges").select("client_id, amount, paid_amount, status").in("status", ["pending","partial","overdue"] as any),
     ]);
 
     const debtByClient = new Map<string, number>();
@@ -451,7 +451,7 @@ export const listChildrenByGroup = createServerFn({ method: "GET" })
     for (const g of groups.data ?? []) byGroup.set(g.id, { group: g, active: [], upcoming: [], leaving: [] });
     const noGroup: any[] = [];
     for (const ch of enriched) {
-      const bucket = ch.group_id ? byGroup.get(ch.group_id) : null;
+      const bucket = ch.group_id ? byGroup.get(ch.group_id as string) : null;
       if (!bucket) { noGroup.push(ch); continue; }
       bucket.active.push(ch);
       if (ch.upcoming) bucket.upcoming.push(ch);
