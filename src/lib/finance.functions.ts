@@ -184,7 +184,7 @@ export const listCharges = createServerFn({ method: "GET" })
     if (data.branch_id) q = q.eq("branch_id", data.branch_id);
     if (data.from) q = q.gte("period_month", data.from);
     if (data.to) q = q.lte("period_month", data.to);
-    if (data.status) q = q.eq("status", data.status);
+    if (data.status) q = q.eq("status", data.status as any);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
     const filtered = data.group_id
@@ -427,6 +427,7 @@ export const listChildrenByGroup = createServerFn({ method: "GET" })
     }
     const contractByChild = new Map<string, any>();
     for (const c of contracts.data ?? []) {
+      if (!c.child_id) continue;
       const prev = contractByChild.get(c.child_id);
       if (!prev || (prev.status === "draft" && c.status !== "draft")) contractByChild.set(c.child_id, c);
     }
