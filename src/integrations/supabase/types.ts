@@ -44,6 +44,44 @@ export type Database = {
         }
         Relationships: []
       }
+      charge_adjustments: {
+        Row: {
+          actor_id: string | null
+          charge_id: string
+          created_at: string
+          id: string
+          new_amount: number
+          old_amount: number
+          reason: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          charge_id: string
+          created_at?: string
+          id?: string
+          new_amount: number
+          old_amount: number
+          reason?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          charge_id?: string
+          created_at?: string
+          id?: string
+          new_amount?: number
+          old_amount?: number
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charge_adjustments_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       charges: {
         Row: {
           amount: number
@@ -51,8 +89,10 @@ export type Database = {
           client_id: string
           contract_id: string
           created_at: string
+          due_date: string
           id: string
           is_prorated: boolean
+          paid_amount: number
           period_month: string
           status: Database["public"]["Enums"]["charge_status"]
           updated_at: string
@@ -63,8 +103,10 @@ export type Database = {
           client_id: string
           contract_id: string
           created_at?: string
+          due_date?: string
           id?: string
           is_prorated?: boolean
+          paid_amount?: number
           period_month: string
           status?: Database["public"]["Enums"]["charge_status"]
           updated_at?: string
@@ -75,8 +117,10 @@ export type Database = {
           client_id?: string
           contract_id?: string
           created_at?: string
+          due_date?: string
           id?: string
           is_prorated?: boolean
+          paid_amount?: number
           period_month?: string
           status?: Database["public"]["Enums"]["charge_status"]
           updated_at?: string
@@ -233,6 +277,58 @@ export type Database = {
           },
         ]
       }
+      client_credits: {
+        Row: {
+          amount_remaining: number
+          branch_id: string
+          client_id: string
+          created_at: string
+          id: string
+          source_payment_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_remaining: number
+          branch_id: string
+          client_id: string
+          created_at?: string
+          id?: string
+          source_payment_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_remaining?: number
+          branch_id?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          source_payment_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_credits_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_credits_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_credits_source_payment_id_fkey"
+            columns: ["source_payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
@@ -318,6 +414,7 @@ export type Database = {
           discount_id: string | null
           end_date: string | null
           id: string
+          income_category_id: string | null
           manual_discount: number
           monthly_price: number
           number: string
@@ -325,6 +422,7 @@ export type Database = {
           pdf_url: string | null
           plan_id: string | null
           price_version_id: string | null
+          recalc_locked: boolean
           service_id: string | null
           start_date: string
           status: Database["public"]["Enums"]["contract_status"]
@@ -341,6 +439,7 @@ export type Database = {
           discount_id?: string | null
           end_date?: string | null
           id?: string
+          income_category_id?: string | null
           manual_discount?: number
           monthly_price?: number
           number?: string
@@ -348,6 +447,7 @@ export type Database = {
           pdf_url?: string | null
           plan_id?: string | null
           price_version_id?: string | null
+          recalc_locked?: boolean
           service_id?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["contract_status"]
@@ -364,6 +464,7 @@ export type Database = {
           discount_id?: string | null
           end_date?: string | null
           id?: string
+          income_category_id?: string | null
           manual_discount?: number
           monthly_price?: number
           number?: string
@@ -371,6 +472,7 @@ export type Database = {
           pdf_url?: string | null
           plan_id?: string | null
           price_version_id?: string | null
+          recalc_locked?: boolean
           service_id?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["contract_status"]
@@ -403,6 +505,13 @@ export type Database = {
             columns: ["discount_id"]
             isOneToOne: false
             referencedRelation: "discounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_income_category_id_fkey"
+            columns: ["income_category_id"]
+            isOneToOne: false
+            referencedRelation: "income_categories"
             referencedColumns: ["id"]
           },
           {
@@ -595,6 +704,7 @@ export type Database = {
         Row: {
           age_range: string | null
           branch_id: string
+          capacity: number | null
           created_at: string
           id: string
           is_active: boolean
@@ -604,6 +714,7 @@ export type Database = {
         Insert: {
           age_range?: string | null
           branch_id: string
+          capacity?: number | null
           created_at?: string
           id?: string
           is_active?: boolean
@@ -613,6 +724,7 @@ export type Database = {
         Update: {
           age_range?: string | null
           branch_id?: string
+          capacity?: number | null
           created_at?: string
           id?: string
           is_active?: boolean
@@ -628,6 +740,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      income_categories: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       leads: {
         Row: {
@@ -741,6 +877,48 @@ export type Database = {
           },
         ]
       }
+      payment_allocations: {
+        Row: {
+          amount: number
+          charge_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          payment_id: string
+        }
+        Insert: {
+          amount: number
+          charge_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          payment_id: string
+        }
+        Update: {
+          amount?: number
+          charge_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          payment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_allocations_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "charges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_allocations_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_methods: {
         Row: {
           created_at: string
@@ -769,7 +947,6 @@ export type Database = {
         Row: {
           amount: number
           branch_id: string
-          charge_id: string | null
           client_id: string
           created_at: string
           created_by: string | null
@@ -777,12 +954,12 @@ export type Database = {
           note: string | null
           paid_at: string
           payment_method_id: string | null
+          status: string
           updated_at: string
         }
         Insert: {
           amount: number
           branch_id: string
-          charge_id?: string | null
           client_id: string
           created_at?: string
           created_by?: string | null
@@ -790,12 +967,12 @@ export type Database = {
           note?: string | null
           paid_at?: string
           payment_method_id?: string | null
+          status?: string
           updated_at?: string
         }
         Update: {
           amount?: number
           branch_id?: string
-          charge_id?: string | null
           client_id?: string
           created_at?: string
           created_by?: string | null
@@ -803,6 +980,7 @@ export type Database = {
           note?: string | null
           paid_at?: string
           payment_method_id?: string | null
+          status?: string
           updated_at?: string
         }
         Relationships: [
@@ -811,13 +989,6 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "payments_charge_id_fkey"
-            columns: ["charge_id"]
-            isOneToOne: false
-            referencedRelation: "charges"
             referencedColumns: ["id"]
           },
           {
@@ -916,6 +1087,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          income_category_id: string | null
           is_active: boolean
           name: string
           updated_at: string
@@ -925,6 +1097,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          income_category_id?: string | null
           is_active?: boolean
           name: string
           updated_at?: string
@@ -934,6 +1107,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          income_category_id?: string | null
           is_active?: boolean
           name?: string
           updated_at?: string
@@ -944,6 +1118,13 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_income_category_id_fkey"
+            columns: ["income_category_id"]
+            isOneToOne: false
+            referencedRelation: "income_categories"
             referencedColumns: ["id"]
           },
         ]
@@ -1077,6 +1258,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      adjust_charge: {
+        Args: { _charge_id: string; _new_amount: number; _reason: string }
+        Returns: undefined
+      }
       convert_lead_to_client: {
         Args: { _lead_id: string }
         Returns: {
@@ -1094,10 +1279,14 @@ export type Database = {
         Returns: boolean
       }
       is_admin_or_manager: { Args: { _user_id: string }; Returns: boolean }
+      recompute_charge_status: {
+        Args: { _charge_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "manager" | "teacher" | "accountant"
-      charge_status: "pending" | "paid" | "partial" | "cancelled"
+      charge_status: "pending" | "paid" | "partial" | "cancelled" | "overdue"
       child_status: "active" | "paused" | "graduated" | "archived"
       client_status: "active" | "paused" | "archived"
       contract_status:
@@ -1266,7 +1455,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "manager", "teacher", "accountant"],
-      charge_status: ["pending", "paid", "partial", "cancelled"],
+      charge_status: ["pending", "paid", "partial", "cancelled", "overdue"],
       child_status: ["active", "paused", "graduated", "archived"],
       client_status: ["active", "paused", "archived"],
       contract_status: [
