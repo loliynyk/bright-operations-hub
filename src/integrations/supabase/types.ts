@@ -312,6 +312,7 @@ export type Database = {
           child_id: string | null
           client_id: string
           comment: string | null
+          confirmed_at: string | null
           created_at: string
           created_by: string | null
           discount_id: string | null
@@ -320,6 +321,7 @@ export type Database = {
           manual_discount: number
           monthly_price: number
           number: string
+          pdf_path: string | null
           pdf_url: string | null
           plan_id: string | null
           price_version_id: string | null
@@ -333,6 +335,7 @@ export type Database = {
           child_id?: string | null
           client_id: string
           comment?: string | null
+          confirmed_at?: string | null
           created_at?: string
           created_by?: string | null
           discount_id?: string | null
@@ -341,6 +344,7 @@ export type Database = {
           manual_discount?: number
           monthly_price?: number
           number?: string
+          pdf_path?: string | null
           pdf_url?: string | null
           plan_id?: string | null
           price_version_id?: string | null
@@ -354,6 +358,7 @@ export type Database = {
           child_id?: string | null
           client_id?: string
           comment?: string | null
+          confirmed_at?: string | null
           created_at?: string
           created_by?: string | null
           discount_id?: string | null
@@ -362,6 +367,7 @@ export type Database = {
           manual_discount?: number
           monthly_price?: number
           number?: string
+          pdf_path?: string | null
           pdf_url?: string | null
           plan_id?: string | null
           price_version_id?: string | null
@@ -1095,6 +1101,7 @@ export type Database = {
       contract_status:
         | "draft"
         | "generated"
+        | "confirmed"
         | "sent"
         | "signed"
         | "cancelled"
@@ -1263,6 +1270,7 @@ export const Constants = {
       contract_status: [
         "draft",
         "generated",
+        "confirmed",
         "sent",
         "signed",
         "cancelled",
