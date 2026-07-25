@@ -33,7 +33,7 @@ export const NAV: NavItem[] = [
     emoji: "👨‍👩‍👧",
     children: [
       { to: "/clients", label: "Клієнти" },
-      { to: "/clients/groups", label: "Групи" },
+      { to: "/clients/children", label: "Діти" },
     ],
   },
   {
@@ -43,7 +43,8 @@ export const NAV: NavItem[] = [
     children: [
       { to: "/finance/contracts", label: "Договори" },
       { to: "/finance/charges", label: "Нарахування" },
-      { to: "/finance/payments", label: "Оплати" },
+      { to: "/finance/payments", label: "Платежі" },
+      { to: "/finance/receivables", label: "Дебіторка" },
       { to: "/finance/expenses", label: "Витрати" },
       { to: "/finance/cash-flow", label: "Cash Flow" },
       { to: "/finance/pnl", label: "P&L" },

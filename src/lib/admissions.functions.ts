@@ -1,12 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-// --- date helpers ---
-function firstOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth(), 1); }
-function daysInMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); }
-function addMonths(d: Date, n: number) { return new Date(d.getFullYear(), d.getMonth() + n, 1); }
-function toIsoDate(d: Date) { return d.toISOString().slice(0, 10); }
+import {
+  addMonthsISO,
+  computeEffectiveMonthly,
+  computeMonthlyChargeAmount,
+  firstOfMonthISO,
+  monthsBetween,
+} from "@/lib/finance-math";
 
 async function insertTimeline(
   supabase: any,
@@ -24,16 +25,14 @@ async function insertTimeline(
 }
 
 // ============================================================
-// Lead → Client conversion (client + child + empty draft contract only).
-// No plan/price selection, no charges, no PDF. Those happen on confirmation.
+// Lead -> Client + Child + Draft Contract (RPC, atomic).
 // ============================================================
 export const convertLeadToClient = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { leadId: string }) => z.object({ leadId: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
-    const { supabase } = context;
-    const { data: rpcRows, error: rpcErr } = await supabase.rpc("convert_lead_to_client", { _lead_id: data.leadId });
-    if (rpcErr) throw new Error(rpcErr.message);
+    const { data: rpcRows, error } = await context.supabase.rpc("convert_lead_to_client", { _lead_id: data.leadId });
+    if (error) throw new Error(error.message);
     const row = Array.isArray(rpcRows) ? rpcRows[0] : rpcRows;
     if (!row?.client_id) throw new Error("Не вдалося створити клієнта");
     return {
@@ -44,7 +43,7 @@ export const convertLeadToClient = createServerFn({ method: "POST" })
   });
 
 // ============================================================
-// Update draft contract fields (no side effects).
+// Update contract fields; recalc future charges if confirmed.
 // ============================================================
 const updateContractSchema = z.object({
   id: z.string().uuid(),
@@ -68,16 +67,19 @@ export const updateContract = createServerFn({ method: "POST" })
     if (patch.price_version_id && patch.monthly_price === undefined) {
       const { data: pv } = await context.supabase
         .from("price_versions").select("monthly_price").eq("id", patch.price_version_id).maybeSingle();
-      if (pv) patch.monthly_price = Number(pv.monthly_price);
+      if (pv) (patch as any).monthly_price = Number(pv.monthly_price);
     }
     const { data: updated, error } = await context.supabase
       .from("contracts").update(patch as any).eq("id", id).select().maybeSingle();
     if (error) throw new Error(error.message);
+    if (updated && updated.status !== "draft" && !updated.recalc_locked) {
+      try { await recalcContractChargesInner(context, updated.id); } catch { /* soft */ }
+    }
     return updated;
   });
 
 // ============================================================
-// Confirm contract: validate → update → charges (idempotent) → PDF → timeline.
+// Confirm contract → initial recalc.
 // ============================================================
 const confirmSchema = z.object({
   id: z.string().uuid(),
@@ -99,7 +101,6 @@ export const confirmContract = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const { supabase, userId } = context;
 
-    // Validate price version belongs to plan and is active
     const { data: pv, error: pvErr } = await supabase
       .from("price_versions")
       .select("id, plan_id, is_active, valid_from, valid_to, monthly_price")
@@ -137,84 +138,102 @@ export const confirmContract = createServerFn({ method: "POST" })
       type: "status_changed", payload: { to: "confirmed" },
     });
 
+    try { await recalcContractChargesInner(context, contract.id); } catch { /* soft */ }
     return { contract };
   });
 
 // ============================================================
-// Idempotent first 3 charges (upsert on unique(contract_id, period_month)).
+// recalcContractCharges — sole writer of contract charges.
+// Never rewrites paid/partial/cancelled or historically-changed rows.
 // ============================================================
-async function generateInitialChargesInner(context: any, contractId: string) {
+export async function recalcContractChargesInner(context: any, contractId: string) {
   const { supabase, userId } = context;
-  const { data: contract, error } = await supabase.from("contracts").select("*").eq("id", contractId).maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!contract) throw new Error("Договір не знайдено");
-  if (contract.status === "draft") throw new Error("Договір ще не підтверджено");
-  if (!contract.monthly_price || Number(contract.monthly_price) <= 0) throw new Error("Не заповнено місячну ціну");
 
-  let effective = Number(contract.monthly_price) - Number(contract.manual_discount ?? 0);
-  if (contract.discount_id) {
-    const { data: disc } = await supabase.from("discounts").select("type, value").eq("id", contract.discount_id).maybeSingle();
-    if (disc) {
-      if (disc.type === "percentage") effective = effective * (1 - Number(disc.value) / 100);
-      else effective = effective - Number(disc.value);
-    }
+  const { data: c } = await supabase.from("contracts").select("*").eq("id", contractId).maybeSingle();
+  if (!c) throw new Error("Договір не знайдено");
+  if (c.status === "draft") throw new Error("Договір ще не підтверджено");
+  if (!c.monthly_price || Number(c.monthly_price) <= 0) throw new Error("Не заповнено місячну ціну");
+  if (c.recalc_locked) return { created: 0, updated: 0, cancelled: 0, drifts: 0 };
+
+  let discount: { type: "percentage" | "fixed"; value: number } | null = null;
+  if (c.discount_id) {
+    const { data: d } = await supabase.from("discounts").select("type, value").eq("id", c.discount_id).maybeSingle();
+    if (d) discount = { type: d.type, value: Number(d.value) };
   }
-  effective = Math.max(0, Math.round(effective * 100) / 100);
+  const effective = computeEffectiveMonthly(Number(c.monthly_price), Number(c.manual_discount ?? 0), discount);
 
-  const start = new Date(contract.start_date);
-  const dim = daysInMonth(start);
-  const startDay = start.getDate();
-  const rows: any[] = [];
-  for (let i = 0; i < 3; i++) {
-    const periodDate = addMonths(firstOfMonth(start), i);
-    let amount = effective;
-    let prorated = false;
-    if (i === 0 && startDay > 1) {
-      const remainingDays = dim - startDay + 1;
-      amount = Math.round((effective * remainingDays / dim) * 100) / 100;
-      prorated = true;
-    }
-    rows.push({
-      branch_id: contract.branch_id,
-      client_id: contract.client_id,
-      contract_id: contract.id,
-      period_month: toIsoDate(periodDate),
-      amount,
-      is_prorated: prorated,
-      status: "pending",
-    });
-  }
+  // Rolling window: cover contract.start .. min(end, start + 12 months).
+  const startIso = firstOfMonthISO(new Date(c.start_date));
+  const horizon = addMonthsISO(startIso, 12);
+  const endIso = c.end_date ? firstOfMonthISO(new Date(c.end_date)) : horizon;
+  const upperIso = endIso < horizon ? endIso : horizon;
+  const targetMonths = monthsBetween(startIso, upperIso);
 
-  const { error: upErr } = await supabase
+  const { data: existing } = await supabase
     .from("charges")
-    .upsert(rows, { onConflict: "contract_id,period_month", ignoreDuplicates: false });
-  if (upErr) throw new Error(upErr.message);
+    .select("id, period_month, amount, paid_amount, status, is_prorated, due_date")
+    .eq("contract_id", contractId);
+  const byMonth = new Map<string, any>();
+  for (const r of existing ?? []) byMonth.set(r.period_month, r);
+
+  let created = 0, updated = 0, cancelled = 0, drifts = 0;
+
+  for (const period of targetMonths) {
+    const { amount, prorated } = computeMonthlyChargeAmount({
+      periodMonthISO: period,
+      startDateISO: c.start_date,
+      endDateISO: c.end_date ?? null,
+      effectiveMonthly: effective,
+    });
+    const cur = byMonth.get(period);
+    if (!cur) {
+      const { error: iErr } = await supabase.from("charges").insert({
+        branch_id: c.branch_id, client_id: c.client_id, contract_id: c.id,
+        period_month: period, due_date: period, amount, is_prorated: prorated, status: "pending",
+      });
+      if (!iErr) created += 1;
+    } else if (Number(cur.paid_amount ?? 0) === 0 && (cur.status === "pending" || cur.status === "overdue")) {
+      if (Number(cur.amount) !== amount || cur.is_prorated !== prorated) {
+        const { error: uErr } = await supabase
+          .from("charges").update({ amount, is_prorated: prorated }).eq("id", cur.id);
+        if (!uErr) updated += 1;
+      }
+    } else if (Number(cur.amount) !== amount) {
+      drifts += 1;
+      await insertTimeline(supabase, userId, {
+        client_id: c.client_id, contract_id: c.id, type: "note_added",
+        payload: { kind: "charge_drift", period_month: period, current: Number(cur.amount), expected: amount },
+      });
+    }
+  }
+
+  // Cancel untouched pending rows outside the target range (contract shortened).
+  const targetSet = new Set(targetMonths);
+  for (const r of existing ?? []) {
+    if (!targetSet.has(r.period_month) && Number(r.paid_amount ?? 0) === 0 && r.status === "pending") {
+      const { error: cErr } = await supabase.from("charges").update({ status: "cancelled" }).eq("id", r.id);
+      if (!cErr) cancelled += 1;
+    }
+  }
 
   await insertTimeline(supabase, userId, {
-    client_id: contract.client_id, contract_id: contract.id,
-    type: "charges_generated", payload: { count: rows.length },
+    client_id: c.client_id, contract_id: c.id, type: "charges_generated",
+    payload: { created, updated, cancelled, drifts },
   });
-  return { count: rows.length };
+
+  return { created, updated, cancelled, drifts };
 }
 
-export const generateInitialCharges = createServerFn({ method: "POST" })
+export const recalcContractCharges = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { contractId: string }) => z.object({ contractId: z.string().uuid() }).parse(d))
-  .handler(async ({ context, data }) => {
-    try {
-      return await generateInitialChargesInner(context, data.contractId);
-    } catch (e: any) {
-      await insertTimeline(context.supabase, context.userId, {
-        contract_id: data.contractId, type: "note_added",
-        payload: { error: "charges_failed", message: e?.message ?? String(e) },
-      });
-      throw e;
-    }
-  });
+  .handler(async ({ context, data }) => recalcContractChargesInner(context, data.contractId));
+
+// Back-compat alias used by client card.
+export const generateInitialCharges = recalcContractCharges;
 
 // ============================================================
-// PDF generation — permanent path stored in contracts.pdf_path.
-// URL is fetched fresh via getContractPdfUrl.
+// PDF generation — never overwrites contract.status.
 // ============================================================
 async function generateContractPdfInner(context: any, contractId: string) {
   const { supabase, userId } = context;
@@ -257,12 +276,9 @@ async function generateContractPdfInner(context: any, contractId: string) {
   });
   if (uploadErr) throw new Error(uploadErr.message);
 
-  await supabase
-    .from("contracts")
-    .update({ pdf_path: path, pdf_url: null, status: "generated" })
-    .eq("id", c.id);
+  // Store path only — never touch status.
+  await supabase.from("contracts").update({ pdf_path: path, pdf_url: null }).eq("id", c.id);
 
-  // Attachment record stores permanent path, not a signed URL.
   const { data: existing } = await supabase.from("client_attachments").select("id").eq("contract_id", c.id).maybeSingle();
   if (!existing) {
     await supabase.from("client_attachments").insert({
@@ -295,9 +311,6 @@ export const generateContractPdf = createServerFn({ method: "POST" })
     }
   });
 
-// ============================================================
-// Fresh signed URL on demand (does not persist).
-// ============================================================
 export const getContractPdfUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { contractId: string }) => z.object({ contractId: z.string().uuid() }).parse(d))

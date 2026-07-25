@@ -17,13 +17,14 @@ import { Route as AuthenticatedOverviewRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedLeadsIndexRouteImport } from './routes/_authenticated/leads.index'
 import { Route as AuthenticatedClientsIndexRouteImport } from './routes/_authenticated/clients.index'
 import { Route as AuthenticatedLeadsIdRouteImport } from './routes/_authenticated/leads.$id'
+import { Route as AuthenticatedFinanceReceivablesRouteImport } from './routes/_authenticated/finance.receivables'
 import { Route as AuthenticatedFinancePnlRouteImport } from './routes/_authenticated/finance.pnl'
 import { Route as AuthenticatedFinancePaymentsRouteImport } from './routes/_authenticated/finance.payments'
 import { Route as AuthenticatedFinanceExpensesRouteImport } from './routes/_authenticated/finance.expenses'
 import { Route as AuthenticatedFinanceContractsRouteImport } from './routes/_authenticated/finance.contracts'
 import { Route as AuthenticatedFinanceChargesRouteImport } from './routes/_authenticated/finance.charges'
 import { Route as AuthenticatedFinanceCashFlowRouteImport } from './routes/_authenticated/finance.cash-flow'
-import { Route as AuthenticatedClientsGroupsRouteImport } from './routes/_authenticated/clients.groups'
+import { Route as AuthenticatedClientsChildrenRouteImport } from './routes/_authenticated/clients.children'
 import { Route as AuthenticatedClientsIdRouteImport } from './routes/_authenticated/clients.$id'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminSubscriptionPlansRouteImport } from './routes/_authenticated/admin.subscription-plans'
@@ -78,6 +79,12 @@ const AuthenticatedLeadsIdRoute = AuthenticatedLeadsIdRouteImport.update({
   path: '/leads/$id',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedFinanceReceivablesRoute =
+  AuthenticatedFinanceReceivablesRouteImport.update({
+    id: '/finance/receivables',
+    path: '/finance/receivables',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedFinancePnlRoute = AuthenticatedFinancePnlRouteImport.update({
   id: '/finance/pnl',
   path: '/finance/pnl',
@@ -113,10 +120,10 @@ const AuthenticatedFinanceCashFlowRoute =
     path: '/finance/cash-flow',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedClientsGroupsRoute =
-  AuthenticatedClientsGroupsRouteImport.update({
-    id: '/clients/groups',
-    path: '/clients/groups',
+const AuthenticatedClientsChildrenRoute =
+  AuthenticatedClientsChildrenRouteImport.update({
+    id: '/clients/children',
+    path: '/clients/children',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedClientsIdRoute = AuthenticatedClientsIdRouteImport.update({
@@ -213,13 +220,14 @@ export interface FileRoutesByFullPath {
   '/admin/subscription-plans': typeof AuthenticatedAdminSubscriptionPlansRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/clients/$id': typeof AuthenticatedClientsIdRoute
-  '/clients/groups': typeof AuthenticatedClientsGroupsRoute
+  '/clients/children': typeof AuthenticatedClientsChildrenRoute
   '/finance/cash-flow': typeof AuthenticatedFinanceCashFlowRoute
   '/finance/charges': typeof AuthenticatedFinanceChargesRoute
   '/finance/contracts': typeof AuthenticatedFinanceContractsRoute
   '/finance/expenses': typeof AuthenticatedFinanceExpensesRoute
   '/finance/payments': typeof AuthenticatedFinancePaymentsRoute
   '/finance/pnl': typeof AuthenticatedFinancePnlRoute
+  '/finance/receivables': typeof AuthenticatedFinanceReceivablesRoute
   '/leads/$id': typeof AuthenticatedLeadsIdRoute
   '/clients/': typeof AuthenticatedClientsIndexRoute
   '/leads/': typeof AuthenticatedLeadsIndexRoute
@@ -242,13 +250,14 @@ export interface FileRoutesByTo {
   '/admin/subscription-plans': typeof AuthenticatedAdminSubscriptionPlansRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/clients/$id': typeof AuthenticatedClientsIdRoute
-  '/clients/groups': typeof AuthenticatedClientsGroupsRoute
+  '/clients/children': typeof AuthenticatedClientsChildrenRoute
   '/finance/cash-flow': typeof AuthenticatedFinanceCashFlowRoute
   '/finance/charges': typeof AuthenticatedFinanceChargesRoute
   '/finance/contracts': typeof AuthenticatedFinanceContractsRoute
   '/finance/expenses': typeof AuthenticatedFinanceExpensesRoute
   '/finance/payments': typeof AuthenticatedFinancePaymentsRoute
   '/finance/pnl': typeof AuthenticatedFinancePnlRoute
+  '/finance/receivables': typeof AuthenticatedFinanceReceivablesRoute
   '/leads/$id': typeof AuthenticatedLeadsIdRoute
   '/clients': typeof AuthenticatedClientsIndexRoute
   '/leads': typeof AuthenticatedLeadsIndexRoute
@@ -273,13 +282,14 @@ export interface FileRoutesById {
   '/_authenticated/admin/subscription-plans': typeof AuthenticatedAdminSubscriptionPlansRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/clients/$id': typeof AuthenticatedClientsIdRoute
-  '/_authenticated/clients/groups': typeof AuthenticatedClientsGroupsRoute
+  '/_authenticated/clients/children': typeof AuthenticatedClientsChildrenRoute
   '/_authenticated/finance/cash-flow': typeof AuthenticatedFinanceCashFlowRoute
   '/_authenticated/finance/charges': typeof AuthenticatedFinanceChargesRoute
   '/_authenticated/finance/contracts': typeof AuthenticatedFinanceContractsRoute
   '/_authenticated/finance/expenses': typeof AuthenticatedFinanceExpensesRoute
   '/_authenticated/finance/payments': typeof AuthenticatedFinancePaymentsRoute
   '/_authenticated/finance/pnl': typeof AuthenticatedFinancePnlRoute
+  '/_authenticated/finance/receivables': typeof AuthenticatedFinanceReceivablesRoute
   '/_authenticated/leads/$id': typeof AuthenticatedLeadsIdRoute
   '/_authenticated/clients/': typeof AuthenticatedClientsIndexRoute
   '/_authenticated/leads/': typeof AuthenticatedLeadsIndexRoute
@@ -304,13 +314,14 @@ export interface FileRouteTypes {
     | '/admin/subscription-plans'
     | '/admin/users'
     | '/clients/$id'
-    | '/clients/groups'
+    | '/clients/children'
     | '/finance/cash-flow'
     | '/finance/charges'
     | '/finance/contracts'
     | '/finance/expenses'
     | '/finance/payments'
     | '/finance/pnl'
+    | '/finance/receivables'
     | '/leads/$id'
     | '/clients/'
     | '/leads/'
@@ -333,13 +344,14 @@ export interface FileRouteTypes {
     | '/admin/subscription-plans'
     | '/admin/users'
     | '/clients/$id'
-    | '/clients/groups'
+    | '/clients/children'
     | '/finance/cash-flow'
     | '/finance/charges'
     | '/finance/contracts'
     | '/finance/expenses'
     | '/finance/payments'
     | '/finance/pnl'
+    | '/finance/receivables'
     | '/leads/$id'
     | '/clients'
     | '/leads'
@@ -363,13 +375,14 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/subscription-plans'
     | '/_authenticated/admin/users'
     | '/_authenticated/clients/$id'
-    | '/_authenticated/clients/groups'
+    | '/_authenticated/clients/children'
     | '/_authenticated/finance/cash-flow'
     | '/_authenticated/finance/charges'
     | '/_authenticated/finance/contracts'
     | '/_authenticated/finance/expenses'
     | '/_authenticated/finance/payments'
     | '/_authenticated/finance/pnl'
+    | '/_authenticated/finance/receivables'
     | '/_authenticated/leads/$id'
     | '/_authenticated/clients/'
     | '/_authenticated/leads/'
@@ -439,6 +452,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLeadsIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/finance/receivables': {
+      id: '/_authenticated/finance/receivables'
+      path: '/finance/receivables'
+      fullPath: '/finance/receivables'
+      preLoaderRoute: typeof AuthenticatedFinanceReceivablesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/finance/pnl': {
       id: '/_authenticated/finance/pnl'
       path: '/finance/pnl'
@@ -481,11 +501,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFinanceCashFlowRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/clients/groups': {
-      id: '/_authenticated/clients/groups'
-      path: '/clients/groups'
-      fullPath: '/clients/groups'
-      preLoaderRoute: typeof AuthenticatedClientsGroupsRouteImport
+    '/_authenticated/clients/children': {
+      id: '/_authenticated/clients/children'
+      path: '/clients/children'
+      fullPath: '/clients/children'
+      preLoaderRoute: typeof AuthenticatedClientsChildrenRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/clients/$id': {
@@ -598,13 +618,14 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminSubscriptionPlansRoute: typeof AuthenticatedAdminSubscriptionPlansRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedClientsIdRoute: typeof AuthenticatedClientsIdRoute
-  AuthenticatedClientsGroupsRoute: typeof AuthenticatedClientsGroupsRoute
+  AuthenticatedClientsChildrenRoute: typeof AuthenticatedClientsChildrenRoute
   AuthenticatedFinanceCashFlowRoute: typeof AuthenticatedFinanceCashFlowRoute
   AuthenticatedFinanceChargesRoute: typeof AuthenticatedFinanceChargesRoute
   AuthenticatedFinanceContractsRoute: typeof AuthenticatedFinanceContractsRoute
   AuthenticatedFinanceExpensesRoute: typeof AuthenticatedFinanceExpensesRoute
   AuthenticatedFinancePaymentsRoute: typeof AuthenticatedFinancePaymentsRoute
   AuthenticatedFinancePnlRoute: typeof AuthenticatedFinancePnlRoute
+  AuthenticatedFinanceReceivablesRoute: typeof AuthenticatedFinanceReceivablesRoute
   AuthenticatedLeadsIdRoute: typeof AuthenticatedLeadsIdRoute
   AuthenticatedClientsIndexRoute: typeof AuthenticatedClientsIndexRoute
   AuthenticatedLeadsIndexRoute: typeof AuthenticatedLeadsIndexRoute
@@ -630,13 +651,14 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedAdminSubscriptionPlansRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
   AuthenticatedClientsIdRoute: AuthenticatedClientsIdRoute,
-  AuthenticatedClientsGroupsRoute: AuthenticatedClientsGroupsRoute,
+  AuthenticatedClientsChildrenRoute: AuthenticatedClientsChildrenRoute,
   AuthenticatedFinanceCashFlowRoute: AuthenticatedFinanceCashFlowRoute,
   AuthenticatedFinanceChargesRoute: AuthenticatedFinanceChargesRoute,
   AuthenticatedFinanceContractsRoute: AuthenticatedFinanceContractsRoute,
   AuthenticatedFinanceExpensesRoute: AuthenticatedFinanceExpensesRoute,
   AuthenticatedFinancePaymentsRoute: AuthenticatedFinancePaymentsRoute,
   AuthenticatedFinancePnlRoute: AuthenticatedFinancePnlRoute,
+  AuthenticatedFinanceReceivablesRoute: AuthenticatedFinanceReceivablesRoute,
   AuthenticatedLeadsIdRoute: AuthenticatedLeadsIdRoute,
   AuthenticatedClientsIndexRoute: AuthenticatedClientsIndexRoute,
   AuthenticatedLeadsIndexRoute: AuthenticatedLeadsIndexRoute,
