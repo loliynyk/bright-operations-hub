@@ -1283,6 +1283,7 @@ export type Database = {
         Args: { _charge_id: string }
         Returns: undefined
       }
+      recompute_one_charge: { Args: { _charge_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "manager" | "teacher" | "accountant"
@@ -1319,6 +1320,7 @@ export type Database = {
         | "contract"
         | "converted"
         | "archived"
+      payment_status: "posted" | "void"
       timeline_event_type:
         | "lead_created"
         | "status_changed"
@@ -1491,6 +1493,7 @@ export const Constants = {
         "converted",
         "archived",
       ],
+      payment_status: ["posted", "void"],
       timeline_event_type: [
         "lead_created",
         "status_changed",
