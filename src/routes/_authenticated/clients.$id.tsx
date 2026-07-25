@@ -102,7 +102,7 @@ function ClientDetail() {
             <SectionCard><p className="text-sm text-muted-foreground">Договорів ще немає.</p></SectionCard>
           ) : (
             data.contracts.map((c: any) => (
-              <ContractCard key={c.id} contract={c} lookups={lookups} attachments={data.attachments} />
+              <ContractCard key={c.id} contract={c} lookups={lookups} attachments={data.attachments} branchId={client.branch_id} />
             ))
           )}
         </TabsContent>
