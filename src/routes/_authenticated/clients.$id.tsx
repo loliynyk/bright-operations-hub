@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { ArrowLeft, FileText, Loader2, Download } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, Download, CheckCircle2, Circle, AlertCircle, RefreshCw } from "lucide-react";
 import { PageContainer, SectionCard, PrimaryButton, SecondaryButton } from "@/components/ds";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,8 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { getClient, updateClient, saveChild } from "@/lib/clients.functions";
 import { listLookups } from "@/lib/lookups.functions";
-import { updateContract, generateContractPdf } from "@/lib/admissions.functions";
-import { contractStatusLabel, CONTRACT_STATUSES } from "@/lib/leads";
+import {
+  updateContract, confirmContract, generateContractPdf,
+  generateInitialCharges, getContractPdfUrl,
+} from "@/lib/admissions.functions";
 import { Timeline } from "@/components/timeline";
 import { format } from "date-fns";
 
