@@ -1,0 +1,461 @@
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+
+// ============================================================
+// Payments + allocations
+// ============================================================
+const recordPaymentSchema = z.object({
+  client_id: z.string().uuid(),
+  branch_id: z.string().uuid(),
+  amount: z.number().positive(),
+  paid_at: z.string().min(1),
+  payment_method_id: z.string().uuid().nullable().optional(),
+  note: z.string().nullable().optional(),
+  allocations: z.array(z.object({
+    charge_id: z.string().uuid(),
+    amount: z.number().positive(),
+  })).optional(),
+});
+
+export const recordPayment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => recordPaymentSchema.parse(d))
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+
+    const { data: pay, error } = await supabase.from("payments").insert({
+      client_id: data.client_id,
+      branch_id: data.branch_id,
+      amount: data.amount,
+      paid_at: data.paid_at,
+      payment_method_id: data.payment_method_id ?? null,
+      note: data.note ?? null,
+      status: "posted",
+      created_by: userId,
+    }).select().maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!pay) throw new Error("Не вдалося створити платіж");
+
+    let remaining = Number(data.amount);
+    const allocs: any[] = [];
+
+    if (data.allocations && data.allocations.length > 0) {
+      const total = data.allocations.reduce((s, a) => s + a.amount, 0);
+      if (total > remaining + 0.005) throw new Error("Сума розподілу перевищує суму платежу");
+      for (const a of data.allocations) {
+        allocs.push({ payment_id: pay.id, charge_id: a.charge_id, amount: a.amount, created_by: userId });
+        remaining -= a.amount;
+      }
+    } else {
+      // FIFO auto-allocate against client's open charges.
+      const { data: openCharges } = await supabase
+        .from("charges")
+        .select("id, amount, paid_amount")
+        .eq("client_id", data.client_id)
+        .in("status", ["pending", "partial", "overdue"])
+        .order("period_month", { ascending: true });
+      for (const ch of openCharges ?? []) {
+        if (remaining <= 0.005) break;
+        const need = Math.max(0, Number(ch.amount) - Number(ch.paid_amount ?? 0));
+        if (need <= 0) continue;
+        const take = Math.min(need, remaining);
+        allocs.push({ payment_id: pay.id, charge_id: ch.id, amount: Math.round(take * 100) / 100, created_by: userId });
+        remaining -= take;
+      }
+    }
+
+    if (allocs.length > 0) {
+      const { error: aErr } = await supabase.from("payment_allocations").insert(allocs);
+      if (aErr) throw new Error(aErr.message);
+    }
+
+    if (remaining > 0.005) {
+      await supabase.from("client_credits").insert({
+        client_id: data.client_id,
+        branch_id: data.branch_id,
+        source_payment_id: pay.id,
+        amount_remaining: Math.round(remaining * 100) / 100,
+      });
+    }
+
+    await supabase.from("timeline_events").insert({
+      client_id: data.client_id, type: "note_added",
+      payload: { kind: "payment_recorded", payment_id: pay.id, amount: data.amount, credited: remaining > 0.005 ? Math.round(remaining * 100) / 100 : 0 },
+      actor_id: userId,
+    });
+
+    return { payment: pay, allocated: allocs.length, credited: Math.max(0, Math.round(remaining * 100) / 100) };
+  });
+
+export const voidPayment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    const { data: pay } = await supabase.from("payments").select("*").eq("id", data.id).maybeSingle();
+    if (!pay) throw new Error("Платіж не знайдено");
+    if (pay.status === "void") return { ok: true };
+
+    // If a credit row was created from this payment and already spent, block.
+    const { data: credit } = await supabase.from("client_credits").select("id, amount_remaining, source_payment_id").eq("source_payment_id", data.id).maybeSingle();
+    if (credit) {
+      await supabase.from("client_credits").update({ amount_remaining: 0 }).eq("id", credit.id);
+    }
+
+    await supabase.from("payment_allocations").delete().eq("payment_id", data.id);
+    const { error } = await supabase.from("payments").update({ status: "void" }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+
+    await supabase.from("timeline_events").insert({
+      client_id: pay.client_id, type: "note_added",
+      payload: { kind: "payment_voided", payment_id: data.id }, actor_id: userId,
+    });
+    return { ok: true };
+  });
+
+export const adjustCharge = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { chargeId: string; newAmount: number; reason: string }) =>
+    z.object({ chargeId: z.string().uuid(), newAmount: z.number().min(0), reason: z.string().min(1) }).parse(d))
+  .handler(async ({ context, data }) => {
+    const { error } = await context.supabase.rpc("adjust_charge", {
+      _charge_id: data.chargeId, _new_amount: data.newAmount, _reason: data.reason,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const cancelCharge = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    const { error } = await context.supabase.from("charges").update({ status: "cancelled" }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ============================================================
+// Client-scoped finance summary (Fінанси tab)
+// ============================================================
+export const getClientFinance = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    const { supabase } = context;
+    const [charges, payments, credits, allocations, methods] = await Promise.all([
+      supabase.from("charges").select("*").eq("client_id", data.clientId).order("period_month"),
+      supabase.from("payments").select("*").eq("client_id", data.clientId).order("paid_at", { ascending: false }),
+      supabase.from("client_credits").select("*").eq("client_id", data.clientId).gt("amount_remaining", 0),
+      supabase.from("payment_allocations").select("id, payment_id, charge_id, amount"),
+      supabase.from("payment_methods").select("id, name").eq("is_active", true),
+    ]);
+    const chargeIds = new Set((charges.data ?? []).map((c: any) => c.id));
+    const paymentIds = new Set((payments.data ?? []).map((p: any) => p.id));
+    const relevantAllocs = (allocations.data ?? []).filter((a: any) => chargeIds.has(a.charge_id) || paymentIds.has(a.payment_id));
+    return {
+      charges: charges.data ?? [],
+      payments: payments.data ?? [],
+      credits: credits.data ?? [],
+      allocations: relevantAllocs,
+      methods: methods.data ?? [],
+    };
+  });
+
+// ============================================================
+// Nарахування — list with filters
+// ============================================================
+const chargesListSchema = z.object({
+  branch_id: z.string().uuid().nullable().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+  status: z.string().nullable().optional(),
+  group_id: z.string().uuid().nullable().optional(),
+});
+export const listCharges = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => chargesListSchema.parse(d ?? {}))
+  .handler(async ({ context, data }) => {
+    let q = context.supabase
+      .from("charges")
+      .select("id, period_month, amount, paid_amount, status, due_date, is_prorated, branch_id, client_id, contract_id, clients:client_id(parent_first_name, parent_last_name), contracts:contract_id(child_id, children:child_id(first_name, last_name, group_id))")
+      .order("period_month", { ascending: false })
+      .limit(500);
+    if (data.branch_id) q = q.eq("branch_id", data.branch_id);
+    if (data.from) q = q.gte("period_month", data.from);
+    if (data.to) q = q.lte("period_month", data.to);
+    if (data.status) q = q.eq("status", data.status);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    const filtered = data.group_id
+      ? (rows ?? []).filter((r: any) => r.contracts?.children?.group_id === data.group_id)
+      : rows ?? [];
+    return filtered;
+  });
+
+// ============================================================
+// Payments — list with filters
+// ============================================================
+const paymentsListSchema = z.object({
+  branch_id: z.string().uuid().nullable().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+  method_id: z.string().uuid().nullable().optional(),
+  search: z.string().optional(),
+});
+export const listPayments = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => paymentsListSchema.parse(d ?? {}))
+  .handler(async ({ context, data }) => {
+    let q = context.supabase
+      .from("payments")
+      .select("id, paid_at, amount, status, note, branch_id, client_id, payment_method_id, clients:client_id(parent_first_name, parent_last_name), payment_methods:payment_method_id(name), allocations:payment_allocations(id, charge_id, amount, charges:charge_id(period_month))")
+      .order("paid_at", { ascending: false })
+      .limit(500);
+    if (data.branch_id) q = q.eq("branch_id", data.branch_id);
+    if (data.from) q = q.gte("paid_at", data.from);
+    if (data.to) q = q.lte("paid_at", data.to);
+    if (data.method_id) q = q.eq("payment_method_id", data.method_id);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    let out = rows ?? [];
+    if (data.search) {
+      const s = data.search.toLowerCase();
+      out = out.filter((r: any) => {
+        const name = `${r.clients?.parent_first_name ?? ""} ${r.clients?.parent_last_name ?? ""}`.toLowerCase();
+        return name.includes(s);
+      });
+    }
+    return out;
+  });
+
+// ============================================================
+// Receivables — aging buckets per client
+// ============================================================
+export const listReceivables = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ branch_id: z.string().uuid().nullable().optional(), group_id: z.string().uuid().nullable().optional() }).parse(d ?? {}))
+  .handler(async ({ context, data }) => {
+    let q = context.supabase
+      .from("charges")
+      .select("id, period_month, amount, paid_amount, status, due_date, branch_id, client_id, contract_id, clients:client_id(parent_first_name, parent_last_name), contracts:contract_id(child_id, children:child_id(first_name, last_name, group_id, groups:group_id(name)))")
+      .in("status", ["pending", "partial", "overdue"]);
+    if (data.branch_id) q = q.eq("branch_id", data.branch_id);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const byClient = new Map<string, any>();
+    for (const r of rows ?? []) {
+      if (data.group_id && r.contracts?.children?.group_id !== data.group_id) continue;
+      const remaining = Math.max(0, Number(r.amount) - Number(r.paid_amount ?? 0));
+      if (remaining <= 0) continue;
+      const due = new Date(r.due_date);
+      const days = Math.floor((today.getTime() - due.getTime()) / 86_400_000);
+      const bucket = days <= 0 ? "current" : days <= 30 ? "b1_30" : days <= 60 ? "b31_60" : "b61_plus";
+      let e = byClient.get(r.client_id);
+      if (!e) {
+        e = {
+          client_id: r.client_id,
+          client_name: `${r.clients?.parent_first_name ?? ""} ${r.clients?.parent_last_name ?? ""}`.trim(),
+          child_name: r.contracts?.children ? `${r.contracts.children.first_name ?? ""} ${r.contracts.children.last_name ?? ""}`.trim() : "",
+          group_name: r.contracts?.children?.groups?.name ?? "",
+          total: 0, current: 0, b1_30: 0, b31_60: 0, b61_plus: 0,
+          oldest_due: r.due_date, months_overdue: 0,
+        };
+        byClient.set(r.client_id, e);
+      }
+      e.total += remaining;
+      (e as any)[bucket] += remaining;
+      if (r.due_date < e.oldest_due) e.oldest_due = r.due_date;
+      if (days > 0) e.months_overdue = Math.max(e.months_overdue, Math.ceil(days / 30));
+    }
+    return Array.from(byClient.values()).sort((a, b) => b.total - a.total);
+  });
+
+// ============================================================
+// Cash Flow — payments in / expenses out by day
+// ============================================================
+const cashSchema = z.object({
+  branch_id: z.string().uuid().nullable().optional(),
+  from: z.string(),
+  to: z.string(),
+  method_id: z.string().uuid().nullable().optional(),
+});
+export const getCashFlow = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => cashSchema.parse(d))
+  .handler(async ({ context, data }) => {
+    let pq = context.supabase.from("payments").select("paid_at, amount, payment_method_id, branch_id, payment_methods:payment_method_id(name)").eq("status", "posted");
+    let eq = context.supabase.from("expenses").select("spent_at, amount, category_id, branch_id, expense_categories:category_id(name)");
+    if (data.branch_id) { pq = pq.eq("branch_id", data.branch_id); eq = eq.eq("branch_id", data.branch_id); }
+    if (data.method_id) pq = pq.eq("payment_method_id", data.method_id);
+
+    // Opening balance = cumulative before `from`.
+    const [openP, openE] = await Promise.all([
+      pq.lt("paid_at", data.from),
+      eq.lt("spent_at", data.from),
+    ]);
+    const opening =
+      (openP.data ?? []).reduce((s: number, r: any) => s + Number(r.amount), 0) -
+      (openE.data ?? []).reduce((s: number, r: any) => s + Number(r.amount), 0);
+
+    const [periodP, periodE] = await Promise.all([
+      pq.gte("paid_at", data.from).lte("paid_at", data.to + "T23:59:59Z"),
+      eq.gte("spent_at", data.from).lte("spent_at", data.to),
+    ]);
+
+    const byDay = new Map<string, { day: string; in: number; out: number }>();
+    const byMethod = new Map<string, number>();
+    const byCategory = new Map<string, number>();
+    let inflow = 0, outflow = 0;
+    for (const r of periodP.data ?? []) {
+      const day = String(r.paid_at).slice(0, 10);
+      const e = byDay.get(day) ?? { day, in: 0, out: 0 };
+      e.in += Number(r.amount); byDay.set(day, e);
+      inflow += Number(r.amount);
+      const m = r.payment_methods?.name ?? "—";
+      byMethod.set(m, (byMethod.get(m) ?? 0) + Number(r.amount));
+    }
+    for (const r of periodE.data ?? []) {
+      const day = String(r.spent_at).slice(0, 10);
+      const e = byDay.get(day) ?? { day, in: 0, out: 0 };
+      e.out += Number(r.amount); byDay.set(day, e);
+      outflow += Number(r.amount);
+      const c = r.expense_categories?.name ?? "—";
+      byCategory.set(c, (byCategory.get(c) ?? 0) + Number(r.amount));
+    }
+    return {
+      opening, inflow, outflow, closing: opening + inflow - outflow,
+      days: Array.from(byDay.values()).sort((a, b) => a.day.localeCompare(b.day)),
+      by_method: Array.from(byMethod.entries()).map(([name, amount]) => ({ name, amount })),
+      by_category: Array.from(byCategory.entries()).map(([name, amount]) => ({ name, amount })),
+    };
+  });
+
+// ============================================================
+// P&L — cash-basis revenue (payments) minus expenses
+// ============================================================
+export const getPnl = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => cashSchema.omit({ method_id: true }).parse(d))
+  .handler(async ({ context, data }) => {
+    let pq = context.supabase
+      .from("payments")
+      .select("paid_at, amount, client_id, branch_id, allocations:payment_allocations(charge_id, amount, charges:charge_id(contract_id, contracts:contract_id(service_id, income_category_id, services:service_id(name, income_category_id), income_categories:income_category_id(name))))")
+      .eq("status", "posted");
+    let eq = context.supabase.from("expenses").select("spent_at, amount, category_id, branch_id, expense_categories:category_id(name)");
+    if (data.branch_id) { pq = pq.eq("branch_id", data.branch_id); eq = eq.eq("branch_id", data.branch_id); }
+
+    const [pays, exps] = await Promise.all([
+      pq.gte("paid_at", data.from).lte("paid_at", data.to + "T23:59:59Z"),
+      eq.gte("spent_at", data.from).lte("spent_at", data.to),
+    ]);
+
+    const revenueByCategory = new Map<string, number>();
+    const monthlyRevenue = new Map<string, number>();
+    let revenueTotal = 0;
+    for (const p of pays.data ?? []) {
+      const month = String(p.paid_at).slice(0, 7);
+      monthlyRevenue.set(month, (monthlyRevenue.get(month) ?? 0) + Number(p.amount));
+      revenueTotal += Number(p.amount);
+      const allocSum = (p.allocations ?? []).reduce((s: number, a: any) => s + Number(a.amount), 0) || 1;
+      if ((p.allocations ?? []).length === 0) {
+        revenueByCategory.set("Без розподілу", (revenueByCategory.get("Без розподілу") ?? 0) + Number(p.amount));
+        continue;
+      }
+      for (const a of p.allocations) {
+        const name =
+          a.charges?.contracts?.income_categories?.name ??
+          a.charges?.contracts?.services?.name ??
+          "Без категорії";
+        const share = Number(p.amount) * (Number(a.amount) / allocSum);
+        revenueByCategory.set(name, (revenueByCategory.get(name) ?? 0) + share);
+      }
+    }
+    const expenseByCategory = new Map<string, number>();
+    const monthlyExpense = new Map<string, number>();
+    let expenseTotal = 0;
+    for (const e of exps.data ?? []) {
+      const month = String(e.spent_at).slice(0, 7);
+      monthlyExpense.set(month, (monthlyExpense.get(month) ?? 0) + Number(e.amount));
+      expenseTotal += Number(e.amount);
+      const name = e.expense_categories?.name ?? "Без категорії";
+      expenseByCategory.set(name, (expenseByCategory.get(name) ?? 0) + Number(e.amount));
+    }
+
+    const months = new Set<string>([...monthlyRevenue.keys(), ...monthlyExpense.keys()]);
+    const monthly = Array.from(months).sort().map((m) => ({
+      month: m,
+      revenue: Math.round((monthlyRevenue.get(m) ?? 0) * 100) / 100,
+      expense: Math.round((monthlyExpense.get(m) ?? 0) * 100) / 100,
+      result: Math.round(((monthlyRevenue.get(m) ?? 0) - (monthlyExpense.get(m) ?? 0)) * 100) / 100,
+    }));
+
+    return {
+      revenue_total: Math.round(revenueTotal * 100) / 100,
+      expense_total: Math.round(expenseTotal * 100) / 100,
+      operating_result: Math.round((revenueTotal - expenseTotal) * 100) / 100,
+      revenue_by_category: Array.from(revenueByCategory.entries()).map(([name, amount]) => ({ name, amount: Math.round(amount * 100) / 100 })),
+      expense_by_category: Array.from(expenseByCategory.entries()).map(([name, amount]) => ({ name, amount })),
+      monthly,
+    };
+  });
+
+// ============================================================
+// Діти — groups + children with contract + debt
+// ============================================================
+export const listChildrenByGroup = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ branch_id: z.string().uuid().nullable().optional(), show_archived: z.boolean().optional() }).parse(d ?? {}))
+  .handler(async ({ context, data }) => {
+    const { supabase } = context;
+    let gq = supabase.from("groups").select("id, name, age_range, capacity, branch_id").eq("is_active", true).order("name");
+    let cq = supabase.from("children").select("id, first_name, last_name, birth_date, start_date, end_date, status, group_id, branch_id, client_id, clients:client_id(parent_first_name, parent_last_name)");
+    if (data.branch_id) { gq = gq.eq("branch_id", data.branch_id); cq = cq.eq("branch_id", data.branch_id); }
+    if (!data.show_archived) cq = cq.neq("status", "archived");
+    const [groups, children, contracts, charges] = await Promise.all([
+      gq, cq,
+      supabase.from("contracts").select("id, child_id, status, monthly_price, manual_discount, discount_id, start_date, end_date").in("status", ["confirmed", "generated", "sent", "signed", "draft"]),
+      supabase.from("charges").select("client_id, amount, paid_amount, status").in("status", ["pending", "partial", "overdue"]),
+    ]);
+
+    const debtByClient = new Map<string, number>();
+    for (const ch of charges.data ?? []) {
+      const d = Math.max(0, Number(ch.amount) - Number(ch.paid_amount ?? 0));
+      debtByClient.set(ch.client_id, (debtByClient.get(ch.client_id) ?? 0) + d);
+    }
+    const contractByChild = new Map<string, any>();
+    for (const c of contracts.data ?? []) {
+      const prev = contractByChild.get(c.child_id);
+      if (!prev || (prev.status === "draft" && c.status !== "draft")) contractByChild.set(c.child_id, c);
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const enriched = (children.data ?? []).map((ch: any) => {
+      const contract = contractByChild.get(ch.id);
+      const debt = debtByClient.get(ch.client_id) ?? 0;
+      const upcoming = ch.start_date && ch.start_date > today;
+      const leaving = ch.end_date && ch.end_date >= today;
+      return {
+        ...ch,
+        parent_name: `${ch.clients?.parent_first_name ?? ""} ${ch.clients?.parent_last_name ?? ""}`.trim(),
+        contract_status: contract?.status ?? null,
+        monthly_price: contract ? Number(contract.monthly_price) : null,
+        debt: Math.round(debt * 100) / 100,
+        upcoming, leaving,
+      };
+    });
+
+    const byGroup = new Map<string, any>();
+    for (const g of groups.data ?? []) byGroup.set(g.id, { group: g, active: [], upcoming: [], leaving: [] });
+    const noGroup: any[] = [];
+    for (const ch of enriched) {
+      const bucket = ch.group_id ? byGroup.get(ch.group_id) : null;
+      if (!bucket) { noGroup.push(ch); continue; }
+      bucket.active.push(ch);
+      if (ch.upcoming) bucket.upcoming.push(ch);
+      if (ch.leaving) bucket.leaving.push(ch);
+    }
+    return { groups: Array.from(byGroup.values()), no_group: noGroup };
+  });
