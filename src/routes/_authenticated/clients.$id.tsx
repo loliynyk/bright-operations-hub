@@ -18,6 +18,7 @@ import {
   generateInitialCharges, getContractPdfUrl,
 } from "@/lib/admissions.functions";
 import { Timeline } from "@/components/timeline";
+import { FinanceTab } from "@/components/finance-tab";
 import { format } from "date-fns";
 
 export const Route = createFileRoute("/_authenticated/clients/$id")({
@@ -92,9 +93,7 @@ function ClientDetail() {
         </TabsContent>
 
         <TabsContent value="finance" className="mt-6">
-          <SectionCard title="Нарахування">
-            <p className="text-sm text-muted-foreground">Список нарахувань буде тут (перший модуль фінансів).</p>
-          </SectionCard>
+          <FinanceTab clientId={id} branchId={client.branch_id} />
         </TabsContent>
 
         <TabsContent value="contract" className="mt-6 space-y-4">
