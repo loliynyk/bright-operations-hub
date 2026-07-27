@@ -314,10 +314,14 @@ function ClientExpansion({ clientId }: { clientId: string }) {
         )}
       </div>
       <div>
-        <div className="mb-2 flex items-center justify-between">
+        <div className="mb-2 flex items-center justify-between gap-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Платежі</p>
-          <Link to="/clients/$id" params={{ id: clientId }} className="text-xs text-primary hover:underline">Відкрити клієнта →</Link>
+          <div className="flex items-center gap-3">
+            <Link to="/clients/$id" params={{ id: clientId }} search={{ tab: "finance" }} className="text-xs font-medium text-primary hover:underline">+ Додати платіж</Link>
+            <Link to="/clients/$id" params={{ id: clientId }} className="text-xs text-primary hover:underline">Відкрити клієнта →</Link>
+          </div>
         </div>
+        <p className="mb-2 text-[11px] text-muted-foreground">Автоматичний FIFO-розподіл на найстаріші відкриті нарахування; надлишок стає кредитом.</p>
         {payments.length === 0 ? <p className="text-xs text-muted-foreground">Платежів немає</p> : (
           <table className="w-full text-xs">
             <thead><tr className="text-muted-foreground">
