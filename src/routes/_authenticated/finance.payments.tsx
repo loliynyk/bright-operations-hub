@@ -155,7 +155,13 @@ export function PaymentsPage() {
             <Input placeholder="Ім'я або прізвище..." value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
         </div>
+        <div className="mt-2 flex gap-2 text-xs">
+          <Button variant="ghost" size="sm" onClick={() => { setFrom("2020-01-01"); setTo(todayISO()); }}>Увесь період</Button>
+          <Button variant="ghost" size="sm" onClick={() => { setFrom(monthsAgoISO(12)); setTo(todayISO()); }}>Останні 12 міс</Button>
+          <Button variant="ghost" size="sm" onClick={() => { setFrom(firstOfMonth(0)); setTo(todayISO()); }}>Цей місяць</Button>
+        </div>
       </SectionCard>
+
 
       <SectionCard>
         <DataTable
