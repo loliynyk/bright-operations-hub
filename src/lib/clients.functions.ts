@@ -21,7 +21,7 @@ export const getClient = createServerFn({ method: "GET" })
     const { supabase } = context;
     const [client, children, contracts, timeline, attachments, charges] = await Promise.all([
       supabase.from("clients").select("*").eq("id", data.id).maybeSingle(),
-      supabase.from("children").select("*").eq("client_id", data.id).order("created_at"),
+      supabase.from("children").select("*, group:group_id(id, name, is_active)").eq("client_id", data.id).order("created_at"),
       supabase.from("contracts").select("*").eq("client_id", data.id).order("created_at", { ascending: false }),
       supabase.from("timeline_events").select("*").eq("client_id", data.id).order("created_at", { ascending: false }),
       supabase.from("client_attachments").select("*").eq("client_id", data.id).order("created_at", { ascending: false }),
