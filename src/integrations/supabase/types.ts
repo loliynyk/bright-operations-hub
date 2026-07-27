@@ -80,6 +80,13 @@ export type Database = {
             referencedRelation: "charges"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "charge_adjustments_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "v_charge_balances"
+            referencedColumns: ["id"]
+          },
         ]
       }
       charges: {
@@ -911,6 +918,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "payment_allocations_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "v_charge_balances"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "payment_allocations_payment_id_fkey"
             columns: ["payment_id"]
             isOneToOne: false
@@ -950,6 +964,7 @@ export type Database = {
           client_id: string
           created_at: string
           created_by: string | null
+          external_ref: string | null
           id: string
           note: string | null
           paid_at: string
@@ -963,6 +978,7 @@ export type Database = {
           client_id: string
           created_at?: string
           created_by?: string | null
+          external_ref?: string | null
           id?: string
           note?: string | null
           paid_at?: string
@@ -976,6 +992,7 @@ export type Database = {
           client_id?: string
           created_at?: string
           created_by?: string | null
+          external_ref?: string | null
           id?: string
           note?: string | null
           paid_at?: string
@@ -1255,13 +1272,50 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_charge_balances: {
+        Row: {
+          allocated: number | null
+          amount: number | null
+          branch_id: string | null
+          client_id: string | null
+          contract_id: string | null
+          derived_status: string | null
+          due_date: string | null
+          id: string | null
+          period_month: string | null
+          remaining: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charges_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charges_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charges_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       adjust_charge: {
         Args: { _charge_id: string; _new_amount: number; _reason: string }
         Returns: undefined
       }
+      apply_credits_to_charge: { Args: { _charge_id: string }; Returns: number }
       convert_lead_to_client: {
         Args: { _lead_id: string }
         Returns: {
@@ -1279,11 +1333,29 @@ export type Database = {
         Returns: boolean
       }
       is_admin_or_manager: { Args: { _user_id: string }; Returns: boolean }
+      post_payment: {
+        Args: {
+          _allocations: Json
+          _amount: number
+          _branch_id: string
+          _client_id: string
+          _external_ref: string
+          _note: string
+          _paid_at: string
+          _payment_method_id: string
+        }
+        Returns: string
+      }
+      reallocate_payment: {
+        Args: { _allocations: Json; _payment_id: string }
+        Returns: undefined
+      }
       recompute_charge_status: {
         Args: { _charge_id: string }
         Returns: undefined
       }
       recompute_one_charge: { Args: { _charge_id: string }; Returns: undefined }
+      void_payment: { Args: { _payment_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "manager" | "teacher" | "accountant"

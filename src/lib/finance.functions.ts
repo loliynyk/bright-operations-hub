@@ -12,6 +12,7 @@ const recordPaymentSchema = z.object({
   paid_at: z.string().min(1),
   payment_method_id: z.string().uuid().nullable().optional(),
   note: z.string().nullable().optional(),
+  external_ref: z.string().min(1).nullable().optional(),
   allocations: z.array(z.object({
     charge_id: z.string().uuid(),
     amount: z.number().positive(),
@@ -22,100 +23,41 @@ export const recordPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => recordPaymentSchema.parse(d))
   .handler(async ({ context, data }) => {
-    const { supabase, userId } = context;
-
-    const { data: pay, error } = await supabase.from("payments").insert({
-      client_id: data.client_id,
-      branch_id: data.branch_id,
-      amount: data.amount,
-      paid_at: data.paid_at,
-      payment_method_id: data.payment_method_id ?? null,
-      note: data.note ?? null,
-      status: "posted",
-      created_by: userId,
-    }).select().maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!pay) throw new Error("Не вдалося створити платіж");
-
-    let remaining = Number(data.amount);
-    const allocs: any[] = [];
-
-    if (data.allocations && data.allocations.length > 0) {
-      const total = data.allocations.reduce((s, a) => s + a.amount, 0);
-      if (total > remaining + 0.005) throw new Error("Сума розподілу перевищує суму платежу");
-      for (const a of data.allocations) {
-        allocs.push({ payment_id: pay.id, charge_id: a.charge_id, amount: a.amount, created_by: userId });
-        remaining -= a.amount;
-      }
-    } else {
-      // FIFO auto-allocate against client's open charges.
-      const { data: openCharges } = await supabase
-        .from("charges")
-        .select("id, amount, paid_amount")
-        .eq("client_id", data.client_id)
-        .in("status", ["pending","partial","overdue"] as any)
-        .order("period_month", { ascending: true });
-      for (const ch of openCharges ?? []) {
-        if (remaining <= 0.005) break;
-        const need = Math.max(0, Number(ch.amount) - Number(ch.paid_amount ?? 0));
-        if (need <= 0) continue;
-        const take = Math.min(need, remaining);
-        allocs.push({ payment_id: pay.id, charge_id: ch.id, amount: Math.round(take * 100) / 100, created_by: userId });
-        remaining -= take;
-      }
-    }
-
-    if (allocs.length > 0) {
-      const { error: aErr } = await supabase.from("payment_allocations").insert(allocs);
-      if (aErr) throw new Error(aErr.message);
-    }
-
-    if (remaining > 0.005) {
-      await supabase.from("client_credits").insert({
-        client_id: data.client_id,
-        branch_id: data.branch_id,
-        source_payment_id: pay.id,
-        amount_remaining: Math.round(remaining * 100) / 100,
-      });
-    }
-
-    await supabase.from("timeline_events").insert({
-      client_id: data.client_id, type: "note_added",
-      payload: { kind: "payment_recorded", payment_id: pay.id, amount: data.amount, credited: remaining > 0.005 ? Math.round(remaining * 100) / 100 : 0 },
-      actor_id: userId,
+    const { supabase } = context;
+    const { data: paymentId, error } = await supabase.rpc("post_payment", {
+      _client_id: data.client_id,
+      _branch_id: data.branch_id,
+      _amount: data.amount,
+      _paid_at: data.paid_at,
+      _payment_method_id: (data.payment_method_id ?? null) as any,
+      _note: (data.note ?? null) as any,
+      _allocations: (data.allocations ?? null) as any,
+      _external_ref: (data.external_ref ?? null) as any,
     });
-
-    return { payment: pay, allocated: allocs.length, credited: Math.max(0, Math.round(remaining * 100) / 100) };
+    if (error) throw new Error(error.message);
+    // Fetch summary for UI (credit + allocated count).
+    const [{ data: pay }, { data: allocs }, { data: credit }] = await Promise.all([
+      supabase.from("payments").select("*").eq("id", paymentId as string).maybeSingle(),
+      supabase.from("payment_allocations").select("id").eq("payment_id", paymentId as string),
+      supabase.from("client_credits").select("amount_remaining").eq("source_payment_id", paymentId as string).maybeSingle(),
+    ]);
+    return {
+      payment: pay,
+      allocated: (allocs ?? []).length,
+      credited: credit ? Number(credit.amount_remaining) : 0,
+    };
   });
 
 export const voidPayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
-    const { supabase, userId } = context;
-    const { data: pay } = await supabase.from("payments").select("*").eq("id", data.id).maybeSingle();
-    if (!pay) throw new Error("Платіж не знайдено");
-    if (pay.status === "void") return { ok: true };
-
-    // If a credit row was created from this payment and already spent, block.
-    const { data: credit } = await supabase.from("client_credits").select("id, amount_remaining, source_payment_id").eq("source_payment_id", data.id).maybeSingle();
-    if (credit) {
-      await supabase.from("client_credits").update({ amount_remaining: 0 }).eq("id", credit.id);
-    }
-
-    await supabase.from("payment_allocations").delete().eq("payment_id", data.id);
-    const { error } = await supabase.from("payments").update({ status: "void" }).eq("id", data.id);
+    const { error } = await context.supabase.rpc("void_payment", { _payment_id: data.id });
     if (error) throw new Error(error.message);
-
-    await supabase.from("timeline_events").insert({
-      client_id: pay.client_id, type: "note_added",
-      payload: { kind: "payment_voided", payment_id: data.id }, actor_id: userId,
-    });
     return { ok: true };
   });
 
-// Manual reallocation: replaces the payment's allocations with the provided set.
-// Validates: payment is posted; sum ≤ payment.amount; each ≤ charge remaining (excluding this payment's current allocation).
+// Manual reallocation via transactional RPC.
 export const reallocatePayment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({
@@ -123,55 +65,15 @@ export const reallocatePayment = createServerFn({ method: "POST" })
     allocations: z.array(z.object({ charge_id: z.string().uuid(), amount: z.number().positive() })),
   }).parse(d))
   .handler(async ({ context, data }) => {
-    const { supabase, userId } = context;
-    const { data: pay } = await supabase.from("payments").select("id, amount, status, client_id, branch_id").eq("id", data.payment_id).maybeSingle();
-    if (!pay) throw new Error("Платіж не знайдено");
-    if (pay.status !== "posted") throw new Error("Скасований платіж не можна перерозподілити");
-
-    const total = data.allocations.reduce((s, a) => s + a.amount, 0);
-    if (total > Number(pay.amount) + 0.005) throw new Error("Сума розподілу перевищує суму платежу");
-
-    // Validate per-charge caps (excluding this payment's own current allocation).
-    const chargeIds = data.allocations.map((a) => a.charge_id);
-    if (chargeIds.length > 0) {
-      const { data: charges } = await supabase.from("charges").select("id, amount, paid_amount, client_id").in("id", chargeIds);
-      const { data: existing } = await supabase.from("payment_allocations").select("charge_id, amount").eq("payment_id", data.payment_id);
-      const existingByCharge = new Map<string, number>();
-      for (const a of existing ?? []) existingByCharge.set(a.charge_id, (existingByCharge.get(a.charge_id) ?? 0) + Number(a.amount));
-      for (const a of data.allocations) {
-        const ch = (charges ?? []).find((c: any) => c.id === a.charge_id);
-        if (!ch) throw new Error("Нарахування не знайдено");
-        if (ch.client_id !== pay.client_id) throw new Error("Нарахування іншого клієнта");
-        const remaining = Number(ch.amount) - (Number(ch.paid_amount ?? 0) - (existingByCharge.get(a.charge_id) ?? 0));
-        if (a.amount > remaining + 0.005) throw new Error(`Розподіл ${a.amount} перевищує залишок нарахування (${remaining.toFixed(2)})`);
-      }
-    }
-
-    await supabase.from("payment_allocations").delete().eq("payment_id", data.payment_id);
-    if (data.allocations.length > 0) {
-      const rows = data.allocations.map((a) => ({ payment_id: data.payment_id, charge_id: a.charge_id, amount: Math.round(a.amount * 100) / 100, created_by: userId }));
-      const { error } = await supabase.from("payment_allocations").insert(rows);
-      if (error) throw new Error(error.message);
-    }
-
-    // Recompute credit from this payment.
-    const leftover = Math.max(0, Number(pay.amount) - total);
-    const { data: credit } = await supabase.from("client_credits").select("id").eq("source_payment_id", data.payment_id).maybeSingle();
-    if (credit) {
-      await supabase.from("client_credits").update({ amount_remaining: Math.round(leftover * 100) / 100 }).eq("id", credit.id);
-    } else if (leftover > 0.005) {
-      await supabase.from("client_credits").insert({
-        client_id: pay.client_id, branch_id: pay.branch_id, source_payment_id: pay.id,
-        amount_remaining: Math.round(leftover * 100) / 100,
-      });
-    }
-
-    await supabase.from("timeline_events").insert({
-      client_id: pay.client_id, type: "note_added",
-      payload: { kind: "payment_reallocated", payment_id: data.payment_id, allocations: data.allocations, credit: leftover },
-      actor_id: userId,
+    const { error } = await context.supabase.rpc("reallocate_payment", {
+      _payment_id: data.payment_id,
+      _allocations: data.allocations as any,
     });
-    return { ok: true, credited: Math.round(leftover * 100) / 100 };
+    if (error) throw new Error(error.message);
+    const { data: credit } = await context.supabase
+      .from("client_credits").select("amount_remaining")
+      .eq("source_payment_id", data.payment_id).maybeSingle();
+    return { ok: true, credited: credit ? Number(credit.amount_remaining) : 0 };
   });
 
 export const adjustCharge = createServerFn({ method: "POST" })
