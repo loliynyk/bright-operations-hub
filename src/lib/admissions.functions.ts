@@ -163,11 +163,13 @@ export async function recalcContractChargesInner(context: any, contractId: strin
   }
   const effective = computeEffectiveMonthly(Number(c.monthly_price), Number(c.manual_discount ?? 0), discount);
 
-  // Rolling window: cover contract.start .. min(end, start + 12 months).
+  // Billing horizon: max(start+3 months, end of next quarter), clipped by contract end.
   const startIso = firstOfMonthISO(new Date(c.start_date));
-  const horizon = addMonthsISO(startIso, 12);
-  const endIso = c.end_date ? firstOfMonthISO(new Date(c.end_date)) : horizon;
-  const upperIso = endIso < horizon ? endIso : horizon;
+  const quarterHorizon = endOfNextQuarterISO(new Date());
+  const minHorizon = addMonthsISO(startIso, 2); // ensure at least 3 months on first confirm
+  const horizonIso = quarterHorizon > minHorizon ? quarterHorizon : minHorizon;
+  const endIso = c.end_date ? firstOfMonthISO(new Date(c.end_date)) : horizonIso;
+  const upperIso = endIso < horizonIso ? endIso : horizonIso;
   const targetMonths = monthsBetween(startIso, upperIso);
 
   const { data: existing } = await supabase
@@ -178,6 +180,7 @@ export async function recalcContractChargesInner(context: any, contractId: strin
   for (const r of existing ?? []) byMonth.set(r.period_month, r);
 
   let created = 0, updated = 0, cancelled = 0, drifts = 0;
+  const newlyCreatedIds: string[] = [];
 
   for (const period of targetMonths) {
     const { amount, prorated } = computeMonthlyChargeAmount({
@@ -188,11 +191,14 @@ export async function recalcContractChargesInner(context: any, contractId: strin
     });
     const cur = byMonth.get(period);
     if (!cur) {
-      const { error: iErr } = await supabase.from("charges").insert({
+      const { data: inserted, error: iErr } = await supabase.from("charges").insert({
         branch_id: c.branch_id, client_id: c.client_id, contract_id: c.id,
         period_month: period, due_date: period, amount, is_prorated: prorated, status: "pending",
-      });
-      if (!iErr) created += 1;
+      }).select("id").maybeSingle();
+      if (!iErr) {
+        created += 1;
+        if (inserted?.id) newlyCreatedIds.push(inserted.id);
+      }
     } else if (Number(cur.paid_amount ?? 0) === 0 && (cur.status === "pending" || cur.status === "overdue")) {
       if (Number(cur.amount) !== amount || cur.is_prorated !== prorated) {
         const { error: uErr } = await supabase
@@ -217,12 +223,19 @@ export async function recalcContractChargesInner(context: any, contractId: strin
     }
   }
 
+  // Auto-apply outstanding client credit to newly created charges (oldest credit first).
+  let creditApplied = 0;
+  for (const id of newlyCreatedIds) {
+    const { data: applied } = await supabase.rpc("apply_credits_to_charge", { _charge_id: id });
+    if (typeof applied === "number") creditApplied += applied;
+  }
+
   await insertTimeline(supabase, userId, {
     client_id: c.client_id, contract_id: c.id, type: "charges_generated",
-    payload: { created, updated, cancelled, drifts },
+    payload: { created, updated, cancelled, drifts, credit_applied: Math.round(creditApplied * 100) / 100, horizon: upperIso },
   });
 
-  return { created, updated, cancelled, drifts };
+  return { created, updated, cancelled, drifts, credit_applied: Math.round(creditApplied * 100) / 100 };
 }
 
 export const recalcContractCharges = createServerFn({ method: "POST" })
