@@ -27,8 +27,9 @@ export function PaymentsPage() {
   const qc = useQueryClient();
   const fn = useServerFn(listPayments);
   const voidFn = useServerFn(voidPayment);
-  const [from, setFrom] = useState(() => firstOfMonth(-1));
+  const [from, setFrom] = useState(() => monthsAgoISO(12));
   const [to, setTo] = useState(() => todayISO());
+
   const [search, setSearch] = useState("");
 
   const { data, isLoading } = useQuery({
