@@ -19,6 +19,7 @@ import {
 } from "@/lib/admissions.functions";
 import { Timeline } from "@/components/timeline";
 import { FinanceTab } from "@/components/finance-tab";
+import { EmptySelectHint } from "@/components/settings/empty-select-hint";
 import { format } from "date-fns";
 
 export const Route = createFileRoute("/_authenticated/clients/$id")({
@@ -127,29 +128,40 @@ function ChildrenTab({ clientId, branchId, children, lookups }: any) {
   const [adding, setAdding] = useState(false);
   const [newChild, setNewChild] = useState({ first_name: "", last_name: "", birth_date: "" });
 
+  const groupOptions = (lookups?.groups ?? []).filter((g: any) => g.branch_id === branchId);
   return (
     <div className="space-y-4">
-      {children.map((child: any) => (
-        <SectionCard key={child.id}>
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="font-medium">{child.first_name} {child.last_name}</p>
-              <p className="text-sm text-muted-foreground">Народжений(а): {child.birth_date ?? "—"} · Статус: {child.status}</p>
+      {children.map((child: any) => {
+        // Include the currently-assigned group even if archived, so history is not lost.
+        const currentGroup = child.group;
+        const optionsForChild = currentGroup && !groupOptions.some((g: any) => g.id === currentGroup.id)
+          ? [...groupOptions, { id: currentGroup.id, name: `${currentGroup.name} (архів)`, branch_id: branchId }]
+          : groupOptions;
+        return (
+          <SectionCard key={child.id}>
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="font-medium">{child.first_name} {child.last_name}</p>
+                <p className="text-sm text-muted-foreground">Народжений(а): {child.birth_date ?? "—"} · Статус: {child.status}</p>
+              </div>
+              <div className="w-56">
+                <Label className="text-xs">Група</Label>
+                <Select value={child.group_id ?? ""} onValueChange={(v) => mutation.mutate({ id: child.id, client_id: clientId, branch_id: branchId, first_name: child.first_name, group_id: v || null } as any)}>
+                  <SelectTrigger className="mt-1 h-8"><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>
+                    {optionsForChild.map((g: any) => (
+                      <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {groupOptions.length === 0 ? (
+                  <EmptySelectHint to="/admin/groups" label="Створити першу групу" />
+                ) : null}
+              </div>
             </div>
-            <div className="w-56">
-              <Label className="text-xs">Група</Label>
-              <Select value={child.group_id ?? ""} onValueChange={(v) => mutation.mutate({ id: child.id, client_id: clientId, branch_id: branchId, first_name: child.first_name, group_id: v || null } as any)}>
-                <SelectTrigger className="mt-1 h-8"><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>
-                  {(lookups?.groups ?? []).filter((g: any) => g.branch_id === branchId).map((g: any) => (
-                    <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </SectionCard>
-      ))}
+          </SectionCard>
+        );
+      })}
       {adding ? (
         <SectionCard title="Нова дитина">
           <div className="grid gap-3 md:grid-cols-3">
