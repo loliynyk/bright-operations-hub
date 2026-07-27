@@ -330,7 +330,7 @@ function toneForChildStatus(status: string): any {
 }
 
 
-function ContractCard({ contract, lookups, attachments, branchId, chargesCount }: any) {
+function ContractCard({ contract, lookups, attachments, branchId, chargesCount, contractCharges }: any) {
   const qc = useQueryClient();
   const updateFn = useServerFn(updateContract);
   const confirmFn = useServerFn(confirmContract);
@@ -419,6 +419,20 @@ function ContractCard({ contract, lookups, attachments, branchId, chargesCount }
   const prices = (lookups?.prices ?? []).filter((p: any) => !merged.plan_id || p.plan_id === merged.plan_id);
   const services = (lookups?.services ?? []).filter((s: any) => s.branch_id === contract.branch_id);
 
+  const serviceName = services.find((s: any) => s.id === merged.service_id)?.name;
+  const planName = plans.find((p: any) => p.id === merged.plan_id)?.name;
+  const priceVersion = prices.find((p: any) => p.id === merged.price_version_id);
+  const discount = (lookups?.discounts ?? []).find((d: any) => d.id === merged.discount_id);
+  const baseMonthly = Number(merged.monthly_price ?? 0) || 0;
+  const manual = Number(merged.manual_discount ?? 0) || 0;
+  let discountedFromRule = 0;
+  if (discount) {
+    discountedFromRule = discount.type === "percentage"
+      ? Math.round(baseMonthly * (Number(discount.value) / 100) * 100) / 100
+      : Number(discount.value) || 0;
+  }
+  const finalMonthly = Math.max(0, baseMonthly - discountedFromRule - manual);
+
   return (
     <SectionCard>
       <div className="mb-4 flex items-center justify-between">
@@ -436,6 +450,27 @@ function ContractCard({ contract, lookups, attachments, branchId, chargesCount }
         chargesGenerated={Number(chargesCount ?? 0) > 0}
         pdfGenerated={hasPdf}
       />
+
+      <div className="mt-6 rounded-lg border border-border bg-muted/20 p-4">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Комерційні умови</p>
+        <ol className="grid gap-1.5 text-sm md:grid-cols-2">
+          <RecapRow n={1} label="Послуга" value={serviceName ?? "—"} />
+          <RecapRow n={2} label="Тарифний план" value={planName ?? "—"} />
+          <RecapRow n={3} label="Версія цін" value={priceVersion ? `${priceVersion.name} — ${priceVersion.monthly_price} ₴` : "—"} />
+          <RecapRow n={4} label="Знижка" value={discount ? `${discount.name} (−${discountedFromRule.toFixed(0)} ₴)` : "—"} />
+          <RecapRow n={5} label="Ручна знижка" value={manual > 0 ? `−${manual.toFixed(0)} ₴` : "—"} />
+          <RecapRow n={6} label="Період" value={`${merged.start_date ?? "—"} → ${merged.end_date ?? "…"}`} />
+        </ol>
+        <div className="mt-3 flex items-baseline justify-between border-t border-border/60 pt-3">
+          <span className="text-xs uppercase tracking-wide text-muted-foreground">Місячна абонплата (підсумок)</span>
+          <span className="text-lg font-semibold">{finalMonthly.toFixed(0)} ₴ / міс.</span>
+        </div>
+        {isDraft ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Після натискання <strong>«Підтвердити договір»</strong> система створить щомісячні нарахування (Charges) відповідно до графіка. Оплачена історія ніколи не змінюється.
+          </p>
+        ) : null}
+      </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
         <Field label="Послуга *">
@@ -477,6 +512,24 @@ function ContractCard({ contract, lookups, attachments, branchId, chargesCount }
           <Textarea rows={2} value={merged.comment ?? ""} onChange={(e) => setPatch({ ...patch, comment: e.target.value })} disabled={!isDraft} />
         </Field>
       </div>
+
+      {isConfirmed && Array.isArray(contractCharges) && contractCharges.length > 0 ? (
+        <div className="mt-6 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Створено нарахувань: {contractCharges.length}</p>
+            <Link to="/finance/settlements" className="text-xs text-primary hover:underline">Відкрити Розрахунки →</Link>
+          </div>
+          <ul className="flex flex-wrap gap-1.5 text-xs">
+            {contractCharges.slice(0, 24).map((c: any) => (
+              <li key={c.id} className={`rounded-md border px-2 py-1 ${c.status === "paid" ? "border-emerald-500/40 bg-emerald-500/10" : c.status === "cancelled" ? "border-border bg-muted text-muted-foreground line-through" : "border-border bg-background"}`}>
+                {format(new Date(c.period_month), "LLL yyyy")} · {Number(c.amount).toFixed(0)} ₴
+              </li>
+            ))}
+            {contractCharges.length > 24 ? <li className="text-muted-foreground">+ ще {contractCharges.length - 24}</li> : null}
+          </ul>
+        </div>
+      ) : null}
+
 
       {isDraft ? (
         <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
