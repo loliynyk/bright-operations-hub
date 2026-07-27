@@ -38,13 +38,14 @@ function StaffPage() {
   });
 
   const arc = useMutation({
-    mutationFn: arcFn,
+    mutationFn: (v: { id: string; is_active: boolean }) => arcFn({ data: v }),
     onSuccess: () => {
       toast.success("Оновлено");
       qc.invalidateQueries({ queryKey: ["employees"] });
     },
     onError: (e: any) => toast.error("Помилка", { description: e.message }),
   });
+
 
   const columns: DataTableColumn<any>[] = [
     {
