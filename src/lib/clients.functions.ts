@@ -19,21 +19,29 @@ export const getClient = createServerFn({ method: "GET" })
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     const { supabase } = context;
-    const [client, children, contracts, timeline, attachments] = await Promise.all([
+    const [client, children, contracts, timeline, attachments, charges] = await Promise.all([
       supabase.from("clients").select("*").eq("id", data.id).maybeSingle(),
       supabase.from("children").select("*").eq("client_id", data.id).order("created_at"),
       supabase.from("contracts").select("*").eq("client_id", data.id).order("created_at", { ascending: false }),
       supabase.from("timeline_events").select("*").eq("client_id", data.id).order("created_at", { ascending: false }),
       supabase.from("client_attachments").select("*").eq("client_id", data.id).order("created_at", { ascending: false }),
+      supabase.from("charges").select("id, contract_id").eq("client_id", data.id),
     ]);
     if (client.error) throw new Error(client.error.message);
     if (!client.data) throw new Error("Клієнта не знайдено");
+    const chargeCountByContract: Record<string, number> = {};
+    for (const c of charges.data ?? []) {
+      const cid = c.contract_id as string | null;
+      if (!cid) continue;
+      chargeCountByContract[cid] = (chargeCountByContract[cid] ?? 0) + 1;
+    }
     return {
       client: client.data,
       children: children.data ?? [],
       contracts: contracts.data ?? [],
       timeline: timeline.data ?? [],
       attachments: attachments.data ?? [],
+      chargeCountByContract,
     };
   });
 
