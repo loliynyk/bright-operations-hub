@@ -313,32 +313,98 @@ export const getChild = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!child) throw new Error("Дитину не знайдено");
-    const [{ data: contracts }, { data: charges }] = await Promise.all([
-      supabase.from("contracts").select("id, number, status, monthly_price, start_date, end_date, plan_id, service_id, updated_at").eq("child_id", data.id).order("updated_at", { ascending: false }),
+    const [{ data: contracts }, { data: charges }, { data: allEvents }] = await Promise.all([
+      supabase
+        .from("contracts")
+        .select("id, number, status, monthly_price, start_date, end_date, plan_id, service_id, updated_at, service:service_id(id, name), plan:plan_id(id, name), price_version:price_version_id(id, name, monthly_price)")
+        .eq("child_id", data.id)
+        .order("updated_at", { ascending: false }),
       supabase.from("charges").select("id, contract_id, period_month, amount, paid_amount, status").eq("client_id", child.client_id).order("period_month", { ascending: false }),
+      supabase.from("timeline_events").select("id, type, payload, actor_id, created_at, contract_id").eq("client_id", child.client_id).order("created_at", { ascending: false }).limit(200),
     ]);
-    return { child, contracts: contracts ?? [], charges: charges ?? [] };
+    // Child-specific timeline: events whose payload references this child OR
+    // events tied to a contract on this child.
+    const contractIds = new Set((contracts ?? []).map((c: any) => c.id));
+    const timeline = (allEvents ?? []).filter((e: any) => {
+      const payloadChildId = e.payload?.child_id;
+      if (payloadChildId === data.id) return true;
+      if (e.contract_id && contractIds.has(e.contract_id)) return true;
+      return false;
+    });
+    return { child, contracts: contracts ?? [], charges: charges ?? [], timeline };
   });
 
 // ============================================================
 // Complete child attendance — transactional via RPC.
+// Structured reason codes: completed | moved | withdrew | other.
 // ============================================================
+const departureReasonCode = z.enum(["completed", "moved", "withdrew", "other"]);
+
 export const completeChildAttendance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z.object({
       id: z.string().uuid(),
       end_date: z.string().min(1),
-      reason: z.string().max(500).nullable().optional(),
+      reason_code: departureReasonCode,
+      note: z.string().max(1000).nullable().optional(),
     }).parse(d),
   )
   .handler(async ({ context, data }) => {
+    // We keep the legacy _reason free-text slot in sync with the note for
+    // backward-compatible timeline reads.
     const { data: res, error } = await context.supabase.rpc("complete_child_attendance", {
       _child_id: data.id,
       _end_date: data.end_date,
-      _reason: (data.reason ?? null) as any,
-    });
+      _reason: (data.note ?? null) as any,
+      _reason_code: data.reason_code,
+      _note: (data.note ?? null) as any,
+    } as any);
     if (error) throw new Error(error.message);
-    return res as { ok: boolean; charges_cancelled: number; contract_id: string | null; contract_closed: boolean };
+    return res as {
+      ok: boolean;
+      charges_cancelled: number;
+      contract_id: string | null;
+      contract_closed: boolean;
+      child_status: string;
+      contract_status: string | null;
+    };
+  });
+
+// ============================================================
+// Reopen a graduated/archived departure. Admin/manager only.
+// Restores active status, clears end_date, reopens the contract.
+// Does NOT recreate cancelled Charges — surface tells the operator that
+// billing must be reviewed/re-generated explicitly.
+// ============================================================
+export const reopenChildAttendance = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      note: z.string().max(1000).nullable().optional(),
+    }).parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    const [{ data: isAdmin }, { data: isManager }] = await Promise.all([
+      supabase.rpc("has_role", { _user_id: userId, _role: "admin" as any }),
+      supabase.rpc("has_role", { _user_id: userId, _role: "manager" as any }),
+    ]);
+    if (!isAdmin && !isManager) {
+      throw new Error("Лише адміністратор або менеджер може відновлювати відвідування");
+    }
+    const { data: res, error } = await supabase.rpc("reopen_child_attendance", {
+      _child_id: data.id,
+      _note: (data.note ?? null) as any,
+    } as any);
+    if (error) throw new Error(error.message);
+    return res as {
+      ok: boolean;
+      child_status: string;
+      contract_id: string | null;
+      contract_status: string | null;
+      billing_review_required: boolean;
+    };
   });
 
