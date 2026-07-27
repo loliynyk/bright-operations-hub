@@ -32,6 +32,19 @@ export const convertLeadToClient = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { leadId: string }) => z.object({ leadId: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
+    // Pre-flight: reject obviously invalid child names before creating any records.
+    const { assertValidChildName, sanitizeOptionalName } = await import("@/lib/child-validation");
+    const { data: lead, error: le } = await context.supabase
+      .from("leads")
+      .select("child_first_name, child_last_name, child_name")
+      .eq("id", data.leadId).maybeSingle();
+    if (le) throw new Error(le.message);
+    if (!lead) throw new Error("Лід не знайдено");
+    const firstRaw = lead.child_first_name ?? (lead.child_name ? lead.child_name.split(/\s+/)[0] : null);
+    const lastRaw = lead.child_last_name ?? (lead.child_name ? lead.child_name.split(/\s+/).slice(1).join(" ") : null);
+    assertValidChildName(firstRaw ?? "Дитина", "Ім'я");
+    sanitizeOptionalName(lastRaw);
+
     const { data: rpcRows, error } = await context.supabase.rpc("convert_lead_to_client", { _lead_id: data.leadId });
     if (error) throw new Error(error.message);
     const row = Array.isArray(rpcRows) ? rpcRows[0] : rpcRows;
@@ -42,6 +55,7 @@ export const convertLeadToClient = createServerFn({ method: "POST" })
       contractId: (row.contract_id ?? null) as string | null,
     };
   });
+
 
 // ============================================================
 // Update contract fields; recalc future charges if confirmed.
