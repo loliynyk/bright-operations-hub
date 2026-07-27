@@ -1,9 +1,10 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { ArrowLeft, FileText, Loader2, Download, CheckCircle2, Circle, AlertCircle, RefreshCw } from "lucide-react";
+import { z } from "zod";
+import { ArrowLeft, FileText, Loader2, Download, CheckCircle2, Circle, AlertCircle, RefreshCw, ArrowRight } from "lucide-react";
 import { PageContainer, SectionCard, PrimaryButton, SecondaryButton } from "@/components/ds";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,12 +26,17 @@ import { FinanceTab } from "@/components/finance-tab";
 import { EmptySelectHint } from "@/components/settings/empty-select-hint";
 import { format } from "date-fns";
 
+type TabKey = "main" | "children" | "finance" | "contract" | "history";
+
 export const Route = createFileRoute("/_authenticated/clients/$id")({
   component: ClientDetail,
+  validateSearch: (s: Record<string, unknown>) =>
+    z.object({ tab: z.enum(["main", "children", "finance", "contract", "history"]).optional() }).parse(s),
 });
 
 function ClientDetail() {
   const { id } = Route.useParams();
+  const search = Route.useSearch();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const getFn = useServerFn(getClient);
@@ -39,6 +45,10 @@ function ClientDetail() {
 
   const { data, isLoading } = useQuery({ queryKey: ["client", id], queryFn: () => getFn({ data: { id } }) });
   const { data: lookups } = useQuery({ queryKey: ["lookups"], queryFn: () => lookupsFn() });
+
+  const tab = (search.tab as TabKey) ?? "main";
+  const setTab = (t: TabKey) =>
+    navigate({ to: "/clients/$id", params: { id }, search: { tab: t === "main" ? undefined : t }, replace: true });
 
   const [form, setForm] = useState<any>(null);
   const save = useMutation({
@@ -52,6 +62,8 @@ function ClientDetail() {
   const current = form ?? client;
   const update = (patch: any) => setForm({ ...(form ?? client), ...patch });
 
+  const totalCharges = Object.values((data.chargeCountByContract ?? {}) as Record<string, number>).reduce((s, n) => s + Number(n ?? 0), 0);
+
   return (
     <PageContainer>
       <div className="mb-6 flex items-center gap-3">
@@ -64,7 +76,16 @@ function ClientDetail() {
         </div>
       </div>
 
-      <Tabs defaultValue="main">
+      <OnboardingPanel
+        client={client}
+        children={data.children as any[]}
+        contracts={data.contracts as any[]}
+        totalCharges={totalCharges}
+        hasPayment={Boolean(data.hasPayment)}
+        onGoto={setTab}
+      />
+
+      <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
         <TabsList>
           <TabsTrigger value="main">Основне</TabsTrigger>
           <TabsTrigger value="children">Діти ({data.children.length})</TabsTrigger>
@@ -105,7 +126,15 @@ function ClientDetail() {
             <SectionCard><p className="text-sm text-muted-foreground">Договорів ще немає.</p></SectionCard>
           ) : (
             data.contracts.map((c: any) => (
-              <ContractCard key={c.id} contract={c} lookups={lookups} attachments={data.attachments} branchId={client.branch_id} chargesCount={(data.chargeCountByContract ?? {})[c.id] ?? 0} />
+              <ContractCard
+                key={c.id}
+                contract={c}
+                lookups={lookups}
+                attachments={data.attachments}
+                branchId={client.branch_id}
+                chargesCount={(data.chargeCountByContract ?? {})[c.id] ?? 0}
+                contractCharges={((data as any).chargesByContract?.[c.id] ?? [])}
+              />
             ))
           )}
         </TabsContent>
@@ -117,6 +146,56 @@ function ClientDetail() {
         </TabsContent>
       </Tabs>
     </PageContainer>
+  );
+}
+
+function OnboardingPanel({ client, children, contracts, totalCharges, hasPayment, onGoto }: {
+  client: any; children: any[]; contracts: any[];
+  totalCharges: number; hasPayment: boolean; onGoto: (t: TabKey) => void;
+}) {
+  const clientDataOk = Boolean(client?.parent_first_name && client?.parent_last_name);
+  const hasChild = children.length > 0;
+  const enrolmentOk = children.some((c) => c.group_id && c.start_date);
+  const activeContract = contracts.find((c: any) => c.status !== "cancelled") ?? contracts[0];
+  const pricingOk = Boolean(activeContract && activeContract.plan_id && activeContract.price_version_id && Number(activeContract.monthly_price) > 0);
+  const confirmedOk = contracts.some((c: any) => ["confirmed", "generated", "sent", "signed", "completed"].includes(c.status));
+  const chargesOk = totalCharges > 0;
+
+  const steps: Array<{ n: number; label: string; done: boolean; action?: () => void; actionLabel?: string }> = [
+    { n: 1, label: "Дані клієнта", done: clientDataOk, action: () => onGoto("main"), actionLabel: "Заповнити" },
+    { n: 2, label: "Дані дитини", done: hasChild, action: () => onGoto("children"), actionLabel: "Додати дитину" },
+    { n: 3, label: "Група та дати відвідування", done: enrolmentOk, action: () => onGoto("children"), actionLabel: "Обрати групу" },
+    { n: 4, label: "Тариф і ціна", done: pricingOk, action: () => onGoto("contract"), actionLabel: "Обрати тариф" },
+    { n: 5, label: "Підтвердження договору", done: confirmedOk, action: () => onGoto("contract"), actionLabel: "Підтвердити" },
+    { n: 6, label: "Нарахування створені", done: chargesOk, action: () => onGoto("contract"), actionLabel: "Перегенерувати" },
+    { n: 7, label: "Перший платіж", done: hasPayment, action: () => onGoto("finance"), actionLabel: "Додати платіж" },
+  ];
+  const completed = steps.filter((s) => s.done).length;
+
+  return (
+    <SectionCard
+      title="Процес підключення клієнта"
+      description={`${completed} з ${steps.length} кроків завершено. Кожен крок показує реальний стан з бази.`}
+      className="mb-6"
+    >
+      <ol className="grid gap-2 md:grid-cols-2">
+        {steps.map((s) => (
+          <li key={s.n} className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm ${s.done ? "border-emerald-500/30 bg-emerald-500/5" : "border-border bg-muted/20"}`}>
+            <div className="flex items-center gap-2 min-w-0">
+              {s.done ? <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" /> : <Circle className="h-4 w-4 text-muted-foreground shrink-0" />}
+              <span className={`truncate ${s.done ? "text-foreground" : "text-muted-foreground"}`}>
+                <span className="text-xs text-muted-foreground mr-1">{s.n}.</span>{s.label}
+              </span>
+            </div>
+            {!s.done && s.action ? (
+              <Button size="sm" variant="ghost" className="h-7 shrink-0" onClick={s.action}>
+                {s.actionLabel} <ArrowRight className="ml-1 h-3 w-3" />
+              </Button>
+            ) : null}
+          </li>
+        ))}
+      </ol>
+    </SectionCard>
   );
 }
 
