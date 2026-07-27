@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Users } from "lucide-react";
 import { PageContainer, PageHeader, SectionCard, StatusBadge, EmptyState, SearchInput } from "@/components/ds";
+import { DataTable, formatDate, type DataTableColumn } from "@/components/ds/data-table";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useBranch } from "@/lib/branch-context";
 import { listChildrenByGroup } from "@/lib/finance.functions";
 import { childStatusLabel, contractStatusLabel } from "@/lib/child-validation";
@@ -35,9 +37,11 @@ function ChildrenPage() {
   const [search, setSearch] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [stateFilter, setStateFilter] = useState<StateFilter>("all");
+  const [view, setView] = useState<"groups" | "list">("list");
   const { data, isLoading } = useQuery({
     queryKey: ["children-by-group", branch.id, showArchived],
     queryFn: () => fn({ data: { branch_id: branch.id, show_archived: showArchived } }),
+    enabled: !!branch.id,
   });
 
   const filtered = useMemo(() => {
@@ -55,6 +59,57 @@ function ChildrenPage() {
       no_group: filt(data.no_group),
     };
   }, [data, search, stateFilter]);
+
+  const allRows = useMemo(() => {
+    if (!filtered) return [] as any[];
+    const grouped = filtered.groups.flatMap((g: any) =>
+      g.children.map((c: any) => ({ ...c, _group_name: g.group.name })),
+    );
+    const nogroup = filtered.no_group.map((c: any) => ({ ...c, _group_name: null }));
+    return [...grouped, ...nogroup];
+  }, [filtered]);
+
+  const listColumns: DataTableColumn<any>[] = [
+    {
+      key: "start_date",
+      header: "Початок",
+      sortAccessor: (r) => r.start_date ?? "",
+      render: (r) => <span className="text-muted-foreground">{formatDate(r.start_date)}</span>,
+    },
+    {
+      key: "child",
+      header: "Дитина",
+      sortAccessor: (r) => `${r.last_name ?? ""} ${r.first_name}`.toLowerCase(),
+      render: (r) => (
+        <span className="font-medium">
+          {r.first_name} {r.last_name ?? ""}
+        </span>
+      ),
+    },
+    {
+      key: "parent",
+      header: "Батьки",
+      sortAccessor: (r) => (r.parent_name ?? "").toLowerCase(),
+      render: (r) => (
+        <Link to="/clients/$id" params={{ id: r.client_id }} className="text-primary hover:underline">
+          {r.parent_name || "—"}
+        </Link>
+      ),
+    },
+    { key: "phone", header: "Телефон", render: (r) => <span className="text-muted-foreground">{r.parent_phone ?? "—"}</span> },
+    {
+      key: "group",
+      header: "Група",
+      sortAccessor: (r) => r._group_name ?? "яяя",
+      render: (r) => <span className="text-muted-foreground">{r._group_name ?? "—"}</span>,
+    },
+    {
+      key: "status",
+      header: "Статус",
+      sortAccessor: (r) => r.status,
+      render: (r) => <StatusBadge tone={toneForChild(r.status)}>{childStatusLabel(r.status)}</StatusBadge>,
+    },
+  ];
 
   return (
     <PageContainer>
@@ -82,20 +137,42 @@ function ChildrenPage() {
           </div>
         }
       />
-      {isLoading || !filtered ? (
-        <p className="text-sm text-muted-foreground">Завантаження...</p>
-      ) : filtered.groups.length === 0 && filtered.no_group.length === 0 ? (
-        <EmptyState icon={Users} title="Дітей ще немає" description="Створіть клієнта та додайте дитину, щоб вона з'явилася тут." />
-      ) : (
-        <div className="space-y-6">
-          {filtered.groups.map((g: any) => (
-            <GroupCard key={g.group.id} group={g.group} rows={g.children} activeCount={g.active_count} upcoming={g.upcoming} leaving={g.leaving} />
-          ))}
-          {filtered.no_group.length > 0 ? (
-            <GroupCard group={{ name: "Без групи", age_range: null, capacity: null }} rows={filtered.no_group} activeCount={filtered.no_group.filter((c: any) => c.state === "active" || c.state === "leaving").length} upcoming={filtered.no_group.filter((c: any) => c.state === "upcoming").length} leaving={filtered.no_group.filter((c: any) => c.state === "leaving").length} />
-          ) : null}
-        </div>
-      )}
+
+      <Tabs value={view} onValueChange={(v) => setView(v as "groups" | "list")}>
+        <TabsList>
+          <TabsTrigger value="list">Список</TabsTrigger>
+          <TabsTrigger value="groups">За групами</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="list" className="mt-4">
+          <SectionCard>
+            <DataTable
+              rows={allRows}
+              columns={listColumns}
+              isLoading={isLoading || !filtered}
+              defaultSort={{ key: "start_date", dir: "desc" }}
+              emptyText="Дітей не знайдено за поточними фільтрами."
+            />
+          </SectionCard>
+        </TabsContent>
+
+        <TabsContent value="groups" className="mt-4">
+          {isLoading || !filtered ? (
+            <p className="text-sm text-muted-foreground">Завантаження...</p>
+          ) : filtered.groups.length === 0 && filtered.no_group.length === 0 ? (
+            <EmptyState icon={Users} title="Дітей ще немає" description="Створіть клієнта та додайте дитину, щоб вона з'явилася тут." />
+          ) : (
+            <div className="space-y-6">
+              {filtered.groups.map((g: any) => (
+                <GroupCard key={g.group.id} group={g.group} rows={g.children} activeCount={g.active_count} upcoming={g.upcoming} leaving={g.leaving} />
+              ))}
+              {filtered.no_group.length > 0 ? (
+                <GroupCard group={{ name: "Без групи", age_range: null, capacity: null }} rows={filtered.no_group} activeCount={filtered.no_group.filter((c: any) => c.state === "active" || c.state === "leaving").length} upcoming={filtered.no_group.filter((c: any) => c.state === "upcoming").length} leaving={filtered.no_group.filter((c: any) => c.state === "leaving").length} />
+              ) : null}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </PageContainer>
   );
 }
