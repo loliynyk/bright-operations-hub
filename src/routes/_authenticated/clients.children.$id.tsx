@@ -21,7 +21,7 @@ import { childStatusLabel, contractStatusLabel } from "@/lib/child-validation";
 import { EmptySelectHint } from "@/components/settings/empty-select-hint";
 import { format } from "date-fns";
 
-export const Route = createFileRoute("/_authenticated/clients/children_/$id")({
+export const Route = createFileRoute("/_authenticated/clients/children/$id")({
   component: ChildCard,
   head: () => ({ meta: [
     { title: "Картка дитини — Bright OS" },
