@@ -18,7 +18,7 @@ export const Route = createFileRoute("/_authenticated/finance/charges")({
   ] }),
 });
 
-function ChargesPage() {
+export function ChargesPage() {
   const { branch } = useBranch();
   const fn = useServerFn(listCharges);
   const [from, setFrom] = useState(() => firstOfMonth(-2));
