@@ -29,10 +29,10 @@ export const recordPayment = createServerFn({ method: "POST" })
       _branch_id: data.branch_id,
       _amount: data.amount,
       _paid_at: data.paid_at,
-      _payment_method_id: data.payment_method_id ?? null,
-      _note: data.note ?? null,
+      _payment_method_id: (data.payment_method_id ?? null) as any,
+      _note: (data.note ?? null) as any,
       _allocations: (data.allocations ?? null) as any,
-      _external_ref: data.external_ref ?? null,
+      _external_ref: (data.external_ref ?? null) as any,
     });
     if (error) throw new Error(error.message);
     // Fetch summary for UI (credit + allocated count).
