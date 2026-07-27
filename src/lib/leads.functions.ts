@@ -4,14 +4,21 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const listLeads = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+  .inputValidator((d: { branch_id?: string | null } | undefined) =>
+    z.object({ branch_id: z.string().uuid().nullable().optional() }).parse(d ?? {}),
+  )
+  .handler(async ({ context, data }) => {
+    let q = context.supabase
       .from("leads")
-      .select("id, parent_name, parent_first_name, parent_last_name, parent_phone, parent_email, child_name, child_first_name, status, source, branch_id, service_id, created_at, converted_client_id")
+      .select(
+        "id, parent_name, parent_first_name, parent_last_name, parent_phone, parent_email, child_name, child_first_name, status, source, branch_id, service_id, registration_date, created_at, converted_client_id",
+      )
       .order("created_at", { ascending: false })
-      .limit(200);
+      .limit(1000);
+    if (data.branch_id) q = q.eq("branch_id", data.branch_id);
+    const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
-    return data ?? [];
+    return rows ?? [];
   });
 
 export const getLead = createServerFn({ method: "GET" })
