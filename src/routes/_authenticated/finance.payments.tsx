@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/finance/payments")({
   ] }),
 });
 
-function PaymentsPage() {
+export function PaymentsPage() {
   const { branch } = useBranch();
   const qc = useQueryClient();
   const fn = useServerFn(listPayments);

@@ -458,3 +458,148 @@ export const listChildrenByGroup = createServerFn({ method: "GET" })
     return { groups: Array.from(byGroup.values()), no_group: noGroup };
   });
 
+
+// ============================================================
+// Settlements — client-level aggregation for unified workspace
+// ============================================================
+const settlementsSchema = z.object({
+  branch_id: z.string().uuid().nullable().optional(),
+  from: z.string(),
+  to: z.string(),
+  group_id: z.string().uuid().nullable().optional(),
+});
+export const getSettlements = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => settlementsSchema.parse(d))
+  .handler(async ({ context, data }) => {
+    const { supabase } = context;
+    // Charges: all non-cancelled for branch (need lifetime debt + period slice)
+    let chQ = supabase
+      .from("charges")
+      .select("id, client_id, contract_id, period_month, amount, paid_amount, status, due_date, contracts:contract_id(child_id, children:child_id(id, first_name, last_name, group_id, groups:group_id(id, name)))")
+      .neq("status", "cancelled");
+    if (data.branch_id) chQ = chQ.eq("branch_id", data.branch_id);
+    // Payments in the period
+    let payQ = supabase
+      .from("payments")
+      .select("id, client_id, amount, paid_at, allocations:payment_allocations(charge_id, amount)")
+      .eq("status", "posted")
+      .gte("paid_at", data.from)
+      .lte("paid_at", data.to + "T23:59:59Z");
+    if (data.branch_id) payQ = payQ.eq("branch_id", data.branch_id);
+    // Credits
+    let crQ = supabase.from("client_credits").select("client_id, amount_remaining").gt("amount_remaining", 0);
+    if (data.branch_id) crQ = crQ.eq("branch_id", data.branch_id);
+    // Client names
+    let clQ = supabase.from("clients").select("id, parent_first_name, parent_last_name, phone");
+    if (data.branch_id) clQ = clQ.eq("branch_id", data.branch_id);
+
+    const [charges, payments, credits, clients] = await Promise.all([chQ, payQ, crQ, clQ]);
+    if (charges.error) throw new Error(charges.error.message);
+    if (payments.error) throw new Error(payments.error.message);
+    if (credits.error) throw new Error(credits.error.message);
+    if (clients.error) throw new Error(clients.error.message);
+
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const from = data.from;
+    const to = data.to;
+
+    type Row = {
+      client_id: string;
+      client_name: string;
+      phone: string | null;
+      children: { id: string; name: string; group_id: string | null; group_name: string | null }[];
+      period_charged: number;
+      period_paid: number;
+      total_debt: number;
+      overdue_debt: number;
+      credit: number;
+      oldest_unpaid_month: string | null;
+      oldest_due_date: string | null;
+      max_days_overdue: number;
+    };
+    const rows = new Map<string, Row>();
+    const ensure = (cid: string): Row => {
+      let r = rows.get(cid);
+      if (!r) {
+        const cl = (clients.data ?? []).find((c: any) => c.id === cid);
+        r = {
+          client_id: cid,
+          client_name: cl ? `${cl.parent_first_name ?? ""} ${cl.parent_last_name ?? ""}`.trim() : "—",
+          phone: cl?.phone ?? null,
+          children: [],
+          period_charged: 0, period_paid: 0, total_debt: 0, overdue_debt: 0, credit: 0,
+          oldest_unpaid_month: null, oldest_due_date: null, max_days_overdue: 0,
+        };
+        rows.set(cid, r);
+      }
+      return r;
+    };
+
+    const seenChildKey = new Set<string>();
+    for (const ch of charges.data ?? []) {
+      const r = ensure(ch.client_id as string);
+      const child: any = (ch as any).contracts?.children;
+      if (child && !seenChildKey.has(`${ch.client_id}:${child.id}`)) {
+        seenChildKey.add(`${ch.client_id}:${child.id}`);
+        r.children.push({
+          id: child.id,
+          name: `${child.first_name ?? ""} ${child.last_name ?? ""}`.trim() || "—",
+          group_id: child.group_id ?? null,
+          group_name: child.groups?.name ?? null,
+        });
+      }
+      const amount = Number(ch.amount);
+      const paid = Number(ch.paid_amount ?? 0);
+      const remaining = Math.max(0, amount - paid);
+      const pm = String(ch.period_month);
+      if (pm >= from && pm <= to) r.period_charged += amount;
+      if (remaining > 0.005) {
+        r.total_debt += remaining;
+        if (!r.oldest_unpaid_month || pm < r.oldest_unpaid_month) r.oldest_unpaid_month = pm;
+        if (ch.due_date) {
+          const due = new Date(ch.due_date);
+          const days = Math.floor((today.getTime() - due.getTime()) / 86_400_000);
+          if (days > 0) {
+            r.overdue_debt += remaining;
+            if (days > r.max_days_overdue) r.max_days_overdue = days;
+            if (!r.oldest_due_date || String(ch.due_date) < r.oldest_due_date) r.oldest_due_date = String(ch.due_date);
+          }
+        }
+      }
+    }
+    for (const p of payments.data ?? []) {
+      const r = ensure(p.client_id as string);
+      r.period_paid += Number(p.amount);
+    }
+    for (const c of credits.data ?? []) {
+      const r = ensure(c.client_id as string);
+      r.credit += Number(c.amount_remaining);
+    }
+
+    let out = Array.from(rows.values());
+    if (data.group_id) {
+      out = out.filter((r) => r.children.some((c) => c.group_id === data.group_id));
+    }
+    // Round & sort
+    for (const r of out) {
+      r.period_charged = Math.round(r.period_charged * 100) / 100;
+      r.period_paid = Math.round(r.period_paid * 100) / 100;
+      r.total_debt = Math.round(r.total_debt * 100) / 100;
+      r.overdue_debt = Math.round(r.overdue_debt * 100) / 100;
+      r.credit = Math.round(r.credit * 100) / 100;
+    }
+    out.sort((a, b) => b.overdue_debt - a.overdue_debt || b.total_debt - a.total_debt || a.client_name.localeCompare(b.client_name));
+
+    const totals = out.reduce((s, r) => {
+      s.charged += r.period_charged;
+      s.paid += r.period_paid;
+      s.debt += r.total_debt;
+      s.overdue += r.overdue_debt;
+      s.credit += r.credit;
+      return s;
+    }, { charged: 0, paid: 0, debt: 0, overdue: 0, credit: 0 });
+    for (const k of Object.keys(totals) as (keyof typeof totals)[]) totals[k] = Math.round(totals[k] * 100) / 100;
+
+    return { rows: out, totals };
+  });
