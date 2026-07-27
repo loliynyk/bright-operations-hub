@@ -3,15 +3,19 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
-import { PageContainer, SectionCard, PrimaryButton, SecondaryButton, StatusBadge } from "@/components/ds";
+import { ArrowLeft, CheckCircle2, Loader2, RotateCcw, AlertTriangle } from "lucide-react";
+import { PageContainer, SectionCard, PrimaryButton, StatusBadge } from "@/components/ds";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { getChild, saveChild, completeChildAttendance, archiveChild, restoreChild } from "@/lib/clients.functions";
+import {
+  getChild, saveChild, completeChildAttendance, reopenChildAttendance,
+  archiveChild, restoreChild,
+} from "@/lib/clients.functions";
 import { listLookups } from "@/lib/lookups.functions";
 import { childStatusLabel, contractStatusLabel } from "@/lib/child-validation";
 import { EmptySelectHint } from "@/components/settings/empty-select-hint";
@@ -21,9 +25,17 @@ export const Route = createFileRoute("/_authenticated/clients/children/$id")({
   component: ChildCard,
   head: () => ({ meta: [
     { title: "Картка дитини — Bright OS" },
-    { name: "description", content: "Редагування даних дитини, група, дати відвідування." },
+    { name: "description", content: "Дані дитини, група, дати відвідування, договір і хронологія." },
   ] }),
 });
+
+type ReasonCode = "completed" | "moved" | "withdrew" | "other";
+const REASON_OPTIONS: Array<{ code: ReasonCode; label: string; hint: string }> = [
+  { code: "completed", label: "Випуск (завершення програми)", hint: "Дитина отримує статус «Випущена», договір закривається." },
+  { code: "moved", label: "Переїзд", hint: "Дитина переходить в архів, договір скасовується." },
+  { code: "withdrew", label: "Відмова батьків", hint: "Дитина переходить в архів, договір скасовується." },
+  { code: "other", label: "Інше", hint: "Дитина переходить в архів, договір скасовується. Опишіть причину нижче." },
+];
 
 function ChildCard() {
   const { id } = Route.useParams();
@@ -32,6 +44,7 @@ function ChildCard() {
   const getFn = useServerFn(getChild);
   const saveFn = useServerFn(saveChild);
   const completeFn = useServerFn(completeChildAttendance);
+  const reopenFn = useServerFn(reopenChildAttendance);
   const archiveFn = useServerFn(archiveChild);
   const restoreFn = useServerFn(restoreChild);
   const lookupsFn = useServerFn(listLookups);
@@ -42,7 +55,10 @@ function ChildCard() {
   const [form, setForm] = useState<any>(null);
   const [completeOpen, setCompleteOpen] = useState(false);
   const [endDate, setEndDate] = useState(new Date().toISOString().slice(0, 10));
-  const [reason, setReason] = useState("");
+  const [reasonCode, setReasonCode] = useState<ReasonCode>("completed");
+  const [note, setNote] = useState("");
+  const [reopenOpen, setReopenOpen] = useState(false);
+  const [reopenNote, setReopenNote] = useState("");
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [archiveReason, setArchiveReason] = useState("");
 
@@ -58,10 +74,19 @@ function ChildCard() {
     onError: (e: any) => toast.error("Помилка", { description: e.message }),
   });
   const complete = useMutation({
-    mutationFn: () => completeFn({ data: { id, end_date: endDate, reason: reason.trim() || null } }),
+    mutationFn: () => completeFn({ data: { id, end_date: endDate, reason_code: reasonCode, note: note.trim() || null } }),
     onSuccess: (res: any) => {
       toast.success(`Відвідування завершено${res?.charges_cancelled ? ` · скасовано ${res.charges_cancelled} нарахувань` : ""}`);
-      setCompleteOpen(false); setReason("");
+      setCompleteOpen(false); setNote(""); setReasonCode("completed");
+      invalidate();
+    },
+    onError: (e: any) => toast.error("Помилка", { description: e.message }),
+  });
+  const reopen = useMutation({
+    mutationFn: () => reopenFn({ data: { id, note: reopenNote.trim() || null } }),
+    onSuccess: () => {
+      toast.success("Відвідування відновлено. Перевірте білінг.");
+      setReopenOpen(false); setReopenNote("");
       invalidate();
     },
     onError: (e: any) => toast.error("Помилка", { description: e.message }),
@@ -80,7 +105,8 @@ function ChildCard() {
   const current = useMemo(() => (form ?? data?.child) as any, [form, data]);
   const activeContract = useMemo(() => {
     if (!data) return null;
-    return (data.contracts as any[]).find((c) => c.status !== "cancelled" && c.status !== "draft") ?? (data.contracts as any[])[0] ?? null;
+    const arr = data.contracts as any[];
+    return arr.find((c) => c.status !== "cancelled" && c.status !== "completed" && c.status !== "draft") ?? arr[0] ?? null;
   }, [data]);
   const debt = useMemo(() => {
     if (!data) return 0;
@@ -101,6 +127,10 @@ function ChildCard() {
     : activeGroups;
   const isArchived = current.status === "archived";
   const isGraduated = current.status === "graduated";
+  const canReopen = isArchived || isGraduated;
+
+  const age = computeAge(current.birth_date);
+  const timeline = (data as any).timeline ?? [];
 
   const update = (patch: any) => setForm({ ...(form ?? child), ...patch });
 
@@ -109,6 +139,7 @@ function ChildCard() {
     save.mutate({
       id,
       client_id: child.client_id,
+      // branch_id is re-derived server-side; sending current value for schema shape only.
       branch_id: branchId,
       first_name: form.first_name,
       last_name: form.last_name,
@@ -130,33 +161,50 @@ function ChildCard() {
               {child.first_name} {child.last_name ?? ""}
             </h1>
             <StatusBadge tone={toneForChildStatus(current.status)}>{childStatusLabel(current.status)}</StatusBadge>
+            {age ? <span className="text-sm text-muted-foreground">· {age}</span> : null}
           </div>
           <p className="text-sm text-muted-foreground">
-            Батьки: <Link to="/clients/$id" params={{ id: child.client_id }} className="text-primary hover:underline">{parentName}</Link>
+            Батьки: <Link to="/clients/$id" params={{ id: child.client_id }} search={{ tab: "main" }} className="text-primary hover:underline">{parentName}</Link>
             {child.clients?.phone ? ` · ${child.clients.phone}` : ""}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {!isArchived && !isGraduated ? (
+          {!canReopen ? (
             <AlertDialog open={completeOpen} onOpenChange={setCompleteOpen}>
               <AlertDialogTrigger asChild>
                 <PrimaryButton><CheckCircle2 className="mr-2 h-4 w-4" />Завершити відвідування</PrimaryButton>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent className="max-w-lg">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Завершити відвідування дитини?</AlertDialogTitle>
+                  <AlertDialogTitle>Завершити відвідування?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Дитина отримає статус "Випущена" з обраною датою завершення. Майбутні неоплачені нарахування будуть скасовані. Оплачена історія залишається без змін.
+                    Оберіть причину — від неї залежить фінальний статус дитини і договору. Майбутні повністю неоплачені нарахування будуть скасовані. Оплачені й частково оплачені періоди залишаються без змін.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                <div className="space-y-3">
-                  <div>
-                    <Label className="text-xs">Дата завершення</Label>
-                    <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Причина *</Label>
+                    <RadioGroup value={reasonCode} onValueChange={(v) => setReasonCode(v as ReasonCode)} className="gap-2">
+                      {REASON_OPTIONS.map((o) => (
+                        <label key={o.code} className="flex items-start gap-2 rounded-md border border-border p-2 cursor-pointer hover:bg-muted/40">
+                          <RadioGroupItem value={o.code} className="mt-0.5" />
+                          <span className="text-sm">
+                            <span className="font-medium">{o.label}</span>
+                            <span className="block text-xs text-muted-foreground">{o.hint}</span>
+                          </span>
+                        </label>
+                      ))}
+                    </RadioGroup>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <Label className="text-xs">Дата завершення *</Label>
+                      <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                    </div>
                   </div>
                   <div>
-                    <Label className="text-xs">Причина (необов'язково)</Label>
-                    <Textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Напр.: перехід у школу, переїзд" />
+                    <Label className="text-xs">Нотатка (необов'язково)</Label>
+                    <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Деталі для історії" maxLength={1000} />
                   </div>
                 </div>
                 <AlertDialogFooter>
@@ -168,10 +216,37 @@ function ChildCard() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-          ) : null}
-          {isArchived ? (
-            <Button variant="ghost" onClick={() => restoreMut.mutate()} disabled={restoreMut.isPending}>Відновити</Button>
           ) : (
+            <AlertDialog open={reopenOpen} onOpenChange={setReopenOpen}>
+              <AlertDialogTrigger asChild>
+                <PrimaryButton><RotateCcw className="mr-2 h-4 w-4" />Відновити відвідування</PrimaryButton>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Відновити відвідування?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Доступно лише для адміністратора/менеджера. Дитина отримає статус «Активна», дата завершення буде очищена, договір буде повторно відкрито.
+                    <br /><br />
+                    <span className="font-medium text-amber-700">Скасовані раніше нарахування НЕ будуть автоматично відновлені.</span> Після відновлення перевірте білінг у розділі Розрахунки і, за потреби, згенеруйте нарахування наново вручну.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div>
+                  <Label className="text-xs">Причина корекції (для аудиту)</Label>
+                  <Textarea rows={2} value={reopenNote} onChange={(e) => setReopenNote(e.target.value)} placeholder="Напр.: помилково закрито" maxLength={1000} />
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Скасувати</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => reopen.mutate()} disabled={reopen.isPending}>
+                    {reopen.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Відновити
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+          {isArchived ? (
+            <Button variant="ghost" onClick={() => restoreMut.mutate()} disabled={restoreMut.isPending}>Швидке відновлення</Button>
+          ) : !isGraduated ? (
             <AlertDialog open={archiveOpen} onOpenChange={(o) => { setArchiveOpen(o); if (!o) setArchiveReason(""); }}>
               <AlertDialogTrigger asChild>
                 <Button variant="ghost">В архів</Button>
@@ -190,7 +265,7 @@ function ChildCard() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -199,7 +274,9 @@ function ChildCard() {
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Ім'я *"><Input value={current.first_name ?? ""} onChange={(e) => update({ first_name: e.target.value })} /></Field>
             <Field label="Прізвище"><Input value={current.last_name ?? ""} onChange={(e) => update({ last_name: e.target.value })} /></Field>
-            <Field label="Дата народження"><Input type="date" value={current.birth_date ?? ""} onChange={(e) => update({ birth_date: e.target.value })} /></Field>
+            <Field label={age ? `Дата народження (${age})` : "Дата народження"}>
+              <Input type="date" value={current.birth_date ?? ""} onChange={(e) => update({ birth_date: e.target.value })} />
+            </Field>
             <Field label="Група">
               <Select value={current.group_id ?? ""} onValueChange={(v) => update({ group_id: v || null })}>
                 <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
@@ -220,29 +297,62 @@ function ChildCard() {
           ) : null}
         </SectionCard>
 
-        <SectionCard title="Договір і фінанси">
+        <SectionCard title="Договір">
           {activeContract ? (
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">Договір</span>
-                <Link to="/clients/$id" params={{ id: child.client_id }} className="text-primary hover:underline">№ {activeContract.number}</Link>
-              </div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Статус</span>
-                <span>{contractStatusLabel(activeContract.status)}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Абонплата</span>
-                <span>{Number(activeContract.monthly_price ?? 0).toFixed(0)} ₴</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Період</span>
-                <span>{activeContract.start_date ?? "—"} → {activeContract.end_date ?? "…"}</span></div>
+              <Row k="Договір">
+                <Link to="/clients/$id" params={{ id: child.client_id }} search={{ tab: "contract" }} className="text-primary hover:underline">№ {activeContract.number}</Link>
+              </Row>
+              <Row k="Статус">{contractStatusLabel(activeContract.status)}</Row>
+              <Row k="Послуга">{activeContract.service?.name ?? "—"}</Row>
+              <Row k="Тариф">{activeContract.plan?.name ?? "—"}</Row>
+              <Row k="Версія цін">{activeContract.price_version?.name ?? "—"}</Row>
+              <Row k="Абонплата">{Number(activeContract.monthly_price ?? 0).toFixed(0)} ₴/міс</Row>
+              <Row k="Період">{activeContract.start_date ?? "—"} → {activeContract.end_date ?? "…"}</Row>
               <div className="mt-3 border-t pt-2 flex justify-between">
                 <span className="text-muted-foreground">Поточний борг</span>
-                <span className={debt > 0 ? "text-destructive font-semibold" : "text-muted-foreground"}>{debt > 0 ? `${debt.toFixed(0)} ₴` : "—"}</span>
+                <span className={debt > 0 ? "text-destructive font-semibold" : "text-muted-foreground"}>
+                  {debt > 0 ? `${debt.toFixed(0)} ₴` : "—"}
+                </span>
               </div>
-              <Link to="/clients/$id" params={{ id: child.client_id }} className="mt-2 inline-block text-xs text-primary hover:underline">Відкрити фінанси клієнта →</Link>
+              <div className="mt-2 flex flex-col gap-1 text-xs">
+                <Link to="/clients/$id" params={{ id: child.client_id }} search={{ tab: "contract" }} className="text-primary hover:underline">Відкрити договір →</Link>
+                <Link to="/clients/$id" params={{ id: child.client_id }} search={{ tab: "finance" }} className="text-primary hover:underline">Фінанси клієнта →</Link>
+              </div>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">Активного договору немає.</p>
           )}
         </SectionCard>
       </div>
+
+      <SectionCard title="Хронологія" className="mt-4">
+        {timeline.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Подій ще немає.</p>
+        ) : (
+          <ol className="space-y-2 text-sm">
+            {timeline.slice(0, 30).map((e: any) => (
+              <li key={e.id} className="flex gap-3 border-b border-border/40 pb-2 last:border-0">
+                <span className="text-xs text-muted-foreground w-28 shrink-0">{format(new Date(e.created_at), "dd.MM.yy HH:mm")}</span>
+                <span className="flex-1">
+                  <span className="font-medium">{timelineKindLabel(e.payload?.kind ?? e.type)}</span>
+                  {renderTimelineExtra(e)}
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </SectionCard>
+
+      {timeline.some((e: any) => e.payload?.billing_review_required) ? (
+        <div className="mt-4 flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          <AlertTriangle className="h-4 w-4 mt-0.5" />
+          <div>
+            <p className="font-medium">Потрібна перевірка білінгу</p>
+            <p className="text-xs">Відвідування було відновлено, але скасовані нарахування не були автоматично відтворені. Перегляньте <Link to="/clients/$id" params={{ id: child.client_id }} search={{ tab: "finance" }} className="underline">фінанси клієнта</Link> та згенеруйте нарахування за потреби.</p>
+          </div>
+        </div>
+      ) : null}
     </PageContainer>
   );
 }
@@ -259,4 +369,66 @@ function toneForChildStatus(status: string): any {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="grid gap-1.5"><Label className="text-xs">{label}</Label>{children}</div>;
+}
+
+function Row({ k, children }: { k: string; children: React.ReactNode }) {
+  return <div className="flex justify-between gap-3"><span className="text-muted-foreground">{k}</span><span className="text-right">{children}</span></div>;
+}
+
+function computeAge(birth?: string | null): string | null {
+  if (!birth) return null;
+  const d = new Date(birth);
+  if (Number.isNaN(d.getTime())) return null;
+  const now = new Date();
+  let years = now.getFullYear() - d.getFullYear();
+  let months = now.getMonth() - d.getMonth();
+  if (now.getDate() < d.getDate()) months -= 1;
+  if (months < 0) { years -= 1; months += 12; }
+  if (years <= 0) return `${Math.max(0, years * 12 + months)} міс`;
+  return months === 0 ? `${years} р` : `${years} р ${months} міс`;
+}
+
+const KIND_LABELS: Record<string, string> = {
+  child_created: "Дитину створено",
+  child_group_changed: "Змінено групу",
+  child_status_changed: "Змінено статус",
+  child_archived: "Переміщено в архів",
+  child_restored: "Відновлено з архіву",
+  child_completed: "Завершення відвідування",
+  child_reopened: "Відновлення відвідування (корекція)",
+  contract_generated: "Договір створено",
+  charges_generated: "Згенеровано нарахування",
+  pdf_generated: "PDF договору",
+  payment_posted: "Прийнято платіж",
+  payment_reallocated: "Перерозподіл платежу",
+  payment_voided: "Скасовано платіж",
+  credit_applied: "Використано кредит клієнта",
+  status_changed: "Зміна статусу",
+  note_added: "Примітка",
+};
+
+function timelineKindLabel(k: string): string {
+  return KIND_LABELS[k] ?? k;
+}
+
+function renderTimelineExtra(e: any) {
+  const p = e.payload ?? {};
+  const bits: string[] = [];
+  if (p.kind === "child_completed") {
+    const reason = p.reason_code ? REASON_OPTIONS.find((o) => o.code === p.reason_code)?.label : null;
+    if (reason) bits.push(reason);
+    if (p.end_date) bits.push(`до ${p.end_date}`);
+    if (typeof p.charges_cancelled === "number") bits.push(`скасовано нарахувань: ${p.charges_cancelled}`);
+    if (p.note) bits.push(`«${p.note}»`);
+  } else if (p.kind === "child_reopened") {
+    if (p.note) bits.push(`«${p.note}»`);
+    if (p.billing_review_required) bits.push("білінг: потрібна перевірка");
+  } else if (p.kind === "child_group_changed") {
+    bits.push(`${p.from_group_name ?? "—"} → ${p.to_group_name ?? "—"}`);
+  } else if (p.kind === "child_archived" || p.kind === "child_restored" || p.kind === "child_status_changed") {
+    if (p.from || p.to) bits.push(`${p.from ?? "—"} → ${p.to ?? "—"}`);
+    if (p.reason) bits.push(`«${p.reason}»`);
+  }
+  if (bits.length === 0) return null;
+  return <span className="ml-2 text-xs text-muted-foreground">· {bits.join(" · ")}</span>;
 }
