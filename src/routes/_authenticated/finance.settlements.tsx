@@ -212,8 +212,8 @@ function SettlementsPage() {
                         r.children.length <= 2 ? r.children.map((c) => c.name).join(", ")
                         : `${r.children[0].name} +${r.children.length - 1}`;
                       return (
-                        <>
-                          <tr key={r.client_id} className="border-b last:border-0 hover:bg-muted/30 cursor-pointer" onClick={() => toggle(r.client_id)}>
+                        <Fragment key={r.client_id}>
+                          <tr className="border-b last:border-0 hover:bg-muted/30 cursor-pointer" onClick={() => toggle(r.client_id)}>
                             <td className="py-2">
                               {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
                             </td>
@@ -236,14 +236,14 @@ function SettlementsPage() {
                             </td>
                           </tr>
                           {isOpen ? (
-                            <tr key={`${r.client_id}-exp`} className="bg-muted/20">
+                            <tr className="bg-muted/20">
                               <td></td>
                               <td colSpan={10} className="py-3 pr-4">
                                 <ClientExpansion clientId={r.client_id} />
                               </td>
                             </tr>
                           ) : null}
-                        </>
+                        </Fragment>
                       );
                     })}
                   </tbody>
