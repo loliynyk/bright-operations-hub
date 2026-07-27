@@ -377,53 +377,84 @@ export const listChildrenByGroup = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ branch_id: z.string().uuid().nullable().optional(), show_archived: z.boolean().optional() }).parse(d ?? {}))
   .handler(async ({ context, data }) => {
     const { supabase } = context;
-    let gq = supabase.from("groups").select("id, name, age_range, capacity, branch_id").eq("is_active", true).order("name");
-    let cq = supabase.from("children").select("id, first_name, last_name, birth_date, start_date, end_date, status, group_id, branch_id, client_id, clients:client_id(parent_first_name, parent_last_name)");
+    let gq = supabase.from("groups").select("id, name, age_range, age_from, age_to, capacity, branch_id, is_active").order("name");
+    let cq = supabase.from("children").select("id, first_name, last_name, birth_date, start_date, end_date, status, group_id, branch_id, client_id, clients:client_id(parent_first_name, parent_last_name, phone)");
     if (data.branch_id) { gq = gq.eq("branch_id", data.branch_id); cq = cq.eq("branch_id", data.branch_id); }
     if (!data.show_archived) cq = cq.neq("status", "archived");
-    const [groups, children, contracts, charges] = await Promise.all([
+    const [groups, children, contracts, charges, plans, services] = await Promise.all([
       gq, cq,
-      supabase.from("contracts").select("id, child_id, status, monthly_price, manual_discount, discount_id, start_date, end_date").in("status", ["confirmed", "generated", "sent", "signed", "draft"]),
+      supabase.from("contracts").select("id, child_id, status, monthly_price, start_date, end_date, plan_id, service_id, updated_at").in("status", ["confirmed", "generated", "sent", "signed", "draft"]),
       supabase.from("charges").select("client_id, amount, paid_amount, status").in("status", ["pending","partial","overdue"] as any),
+      supabase.from("subscription_plans").select("id, name"),
+      supabase.from("services").select("id, name"),
     ]);
+
+    const planName = new Map((plans.data ?? []).map((p: any) => [p.id, p.name]));
+    const serviceName = new Map((services.data ?? []).map((s: any) => [s.id, s.name]));
 
     const debtByClient = new Map<string, number>();
     for (const ch of charges.data ?? []) {
       const d = Math.max(0, Number(ch.amount) - Number(ch.paid_amount ?? 0));
       debtByClient.set(ch.client_id, (debtByClient.get(ch.client_id) ?? 0) + d);
     }
+    // Pick the most recent non-draft contract per child; fall back to draft.
     const contractByChild = new Map<string, any>();
     for (const c of contracts.data ?? []) {
       if (!c.child_id) continue;
       const prev = contractByChild.get(c.child_id);
-      if (!prev || (prev.status === "draft" && c.status !== "draft")) contractByChild.set(c.child_id, c);
+      if (!prev) { contractByChild.set(c.child_id, c); continue; }
+      const preferNew = (prev.status === "draft" && c.status !== "draft")
+        || (prev.status === c.status && String(c.updated_at) > String(prev.updated_at));
+      if (preferNew) contractByChild.set(c.child_id, c);
     }
 
     const today = new Date().toISOString().slice(0, 10);
+    const in30 = new Date(); in30.setDate(in30.getDate() + 30);
+    const in30iso = in30.toISOString().slice(0, 10);
+
     const enriched = (children.data ?? []).map((ch: any) => {
       const contract = contractByChild.get(ch.id);
       const debt = debtByClient.get(ch.client_id) ?? 0;
-      const upcoming = ch.start_date && ch.start_date > today;
-      const leaving = ch.end_date && ch.end_date >= today;
+      const start = contract?.start_date ?? ch.start_date ?? null;
+      const end = contract?.end_date ?? ch.end_date ?? null;
+
+      let state: "active" | "upcoming" | "leaving" | "ended" | "no_contract" = "no_contract";
+      if (contract) {
+        if (start && start > today) state = "upcoming";
+        else if (end && end < today) state = "ended";
+        else if (end && end >= today && end <= in30iso) state = "leaving";
+        else state = "active";
+      }
+
       return {
         ...ch,
         parent_name: `${ch.clients?.parent_first_name ?? ""} ${ch.clients?.parent_last_name ?? ""}`.trim(),
+        parent_phone: ch.clients?.phone ?? null,
         contract_status: contract?.status ?? null,
         monthly_price: contract ? Number(contract.monthly_price) : null,
+        start_date: start,
+        end_date: end,
+        plan_name: contract?.plan_id ? planName.get(contract.plan_id) ?? null : null,
+        service_name: contract?.service_id ? serviceName.get(contract.service_id) ?? null : null,
         debt: Math.round(debt * 100) / 100,
-        upcoming, leaving,
+        state,
       };
     });
 
     const byGroup = new Map<string, any>();
-    for (const g of groups.data ?? []) byGroup.set(g.id, { group: g, active: [], upcoming: [], leaving: [] });
+    for (const g of groups.data ?? []) {
+      if (!g.is_active) continue;
+      byGroup.set(g.id, { group: g, children: [], active_count: 0, upcoming: 0, leaving: 0 });
+    }
     const noGroup: any[] = [];
     for (const ch of enriched) {
       const bucket = ch.group_id ? byGroup.get(ch.group_id as string) : null;
       if (!bucket) { noGroup.push(ch); continue; }
-      bucket.active.push(ch);
-      if (ch.upcoming) bucket.upcoming.push(ch);
-      if (ch.leaving) bucket.leaving.push(ch);
+      bucket.children.push(ch);
+      if (ch.state === "active" || ch.state === "leaving") bucket.active_count += 1;
+      if (ch.state === "upcoming") bucket.upcoming += 1;
+      if (ch.state === "leaving") bucket.leaving += 1;
     }
     return { groups: Array.from(byGroup.values()), no_group: noGroup };
   });
+
