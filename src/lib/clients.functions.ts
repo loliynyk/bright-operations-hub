@@ -309,7 +309,7 @@ export const completeChildAttendance = createServerFn({ method: "POST" })
     const { data: res, error } = await context.supabase.rpc("complete_child_attendance", {
       _child_id: data.id,
       _end_date: data.end_date,
-      _reason: data.reason ?? null,
+      _reason: (data.reason ?? null) as any,
     });
     if (error) throw new Error(error.message);
     return res as { ok: boolean; charges_cancelled: number; contract_id: string | null; contract_closed: boolean };
