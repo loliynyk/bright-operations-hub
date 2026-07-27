@@ -28,8 +28,10 @@ import { Route as AuthenticatedClientsChildrenRouteImport } from './routes/_auth
 import { Route as AuthenticatedClientsIdRouteImport } from './routes/_authenticated/clients.$id'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminSubscriptionPlansRouteImport } from './routes/_authenticated/admin.subscription-plans'
+import { Route as AuthenticatedAdminServicesRouteImport } from './routes/_authenticated/admin.services'
 import { Route as AuthenticatedAdminRolesRouteImport } from './routes/_authenticated/admin.roles'
 import { Route as AuthenticatedAdminPriceListsRouteImport } from './routes/_authenticated/admin.price-lists'
+import { Route as AuthenticatedAdminPaymentMethodsRouteImport } from './routes/_authenticated/admin.payment-methods'
 import { Route as AuthenticatedAdminLeadSourcesRouteImport } from './routes/_authenticated/admin.lead-sources'
 import { Route as AuthenticatedAdminIncomeCategoriesRouteImport } from './routes/_authenticated/admin.income-categories'
 import { Route as AuthenticatedAdminGroupsRouteImport } from './routes/_authenticated/admin.groups'
@@ -142,6 +144,12 @@ const AuthenticatedAdminSubscriptionPlansRoute =
     path: '/admin/subscription-plans',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminServicesRoute =
+  AuthenticatedAdminServicesRouteImport.update({
+    id: '/admin/services',
+    path: '/admin/services',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminRolesRoute = AuthenticatedAdminRolesRouteImport.update({
   id: '/admin/roles',
   path: '/admin/roles',
@@ -151,6 +159,12 @@ const AuthenticatedAdminPriceListsRoute =
   AuthenticatedAdminPriceListsRouteImport.update({
     id: '/admin/price-lists',
     path: '/admin/price-lists',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminPaymentMethodsRoute =
+  AuthenticatedAdminPaymentMethodsRouteImport.update({
+    id: '/admin/payment-methods',
+    path: '/admin/payment-methods',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAdminLeadSourcesRoute =
@@ -215,8 +229,10 @@ export interface FileRoutesByFullPath {
   '/admin/groups': typeof AuthenticatedAdminGroupsRoute
   '/admin/income-categories': typeof AuthenticatedAdminIncomeCategoriesRoute
   '/admin/lead-sources': typeof AuthenticatedAdminLeadSourcesRoute
+  '/admin/payment-methods': typeof AuthenticatedAdminPaymentMethodsRoute
   '/admin/price-lists': typeof AuthenticatedAdminPriceListsRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
+  '/admin/services': typeof AuthenticatedAdminServicesRoute
   '/admin/subscription-plans': typeof AuthenticatedAdminSubscriptionPlansRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/clients/$id': typeof AuthenticatedClientsIdRoute
@@ -245,8 +261,10 @@ export interface FileRoutesByTo {
   '/admin/groups': typeof AuthenticatedAdminGroupsRoute
   '/admin/income-categories': typeof AuthenticatedAdminIncomeCategoriesRoute
   '/admin/lead-sources': typeof AuthenticatedAdminLeadSourcesRoute
+  '/admin/payment-methods': typeof AuthenticatedAdminPaymentMethodsRoute
   '/admin/price-lists': typeof AuthenticatedAdminPriceListsRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
+  '/admin/services': typeof AuthenticatedAdminServicesRoute
   '/admin/subscription-plans': typeof AuthenticatedAdminSubscriptionPlansRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/clients/$id': typeof AuthenticatedClientsIdRoute
@@ -277,8 +295,10 @@ export interface FileRoutesById {
   '/_authenticated/admin/groups': typeof AuthenticatedAdminGroupsRoute
   '/_authenticated/admin/income-categories': typeof AuthenticatedAdminIncomeCategoriesRoute
   '/_authenticated/admin/lead-sources': typeof AuthenticatedAdminLeadSourcesRoute
+  '/_authenticated/admin/payment-methods': typeof AuthenticatedAdminPaymentMethodsRoute
   '/_authenticated/admin/price-lists': typeof AuthenticatedAdminPriceListsRoute
   '/_authenticated/admin/roles': typeof AuthenticatedAdminRolesRoute
+  '/_authenticated/admin/services': typeof AuthenticatedAdminServicesRoute
   '/_authenticated/admin/subscription-plans': typeof AuthenticatedAdminSubscriptionPlansRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/clients/$id': typeof AuthenticatedClientsIdRoute
@@ -309,8 +329,10 @@ export interface FileRouteTypes {
     | '/admin/groups'
     | '/admin/income-categories'
     | '/admin/lead-sources'
+    | '/admin/payment-methods'
     | '/admin/price-lists'
     | '/admin/roles'
+    | '/admin/services'
     | '/admin/subscription-plans'
     | '/admin/users'
     | '/clients/$id'
@@ -339,8 +361,10 @@ export interface FileRouteTypes {
     | '/admin/groups'
     | '/admin/income-categories'
     | '/admin/lead-sources'
+    | '/admin/payment-methods'
     | '/admin/price-lists'
     | '/admin/roles'
+    | '/admin/services'
     | '/admin/subscription-plans'
     | '/admin/users'
     | '/clients/$id'
@@ -370,8 +394,10 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/groups'
     | '/_authenticated/admin/income-categories'
     | '/_authenticated/admin/lead-sources'
+    | '/_authenticated/admin/payment-methods'
     | '/_authenticated/admin/price-lists'
     | '/_authenticated/admin/roles'
+    | '/_authenticated/admin/services'
     | '/_authenticated/admin/subscription-plans'
     | '/_authenticated/admin/users'
     | '/_authenticated/clients/$id'
@@ -529,6 +555,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminSubscriptionPlansRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/services': {
+      id: '/_authenticated/admin/services'
+      path: '/admin/services'
+      fullPath: '/admin/services'
+      preLoaderRoute: typeof AuthenticatedAdminServicesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/roles': {
       id: '/_authenticated/admin/roles'
       path: '/admin/roles'
@@ -541,6 +574,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/price-lists'
       fullPath: '/admin/price-lists'
       preLoaderRoute: typeof AuthenticatedAdminPriceListsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/payment-methods': {
+      id: '/_authenticated/admin/payment-methods'
+      path: '/admin/payment-methods'
+      fullPath: '/admin/payment-methods'
+      preLoaderRoute: typeof AuthenticatedAdminPaymentMethodsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/lead-sources': {
@@ -613,8 +653,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminGroupsRoute: typeof AuthenticatedAdminGroupsRoute
   AuthenticatedAdminIncomeCategoriesRoute: typeof AuthenticatedAdminIncomeCategoriesRoute
   AuthenticatedAdminLeadSourcesRoute: typeof AuthenticatedAdminLeadSourcesRoute
+  AuthenticatedAdminPaymentMethodsRoute: typeof AuthenticatedAdminPaymentMethodsRoute
   AuthenticatedAdminPriceListsRoute: typeof AuthenticatedAdminPriceListsRoute
   AuthenticatedAdminRolesRoute: typeof AuthenticatedAdminRolesRoute
+  AuthenticatedAdminServicesRoute: typeof AuthenticatedAdminServicesRoute
   AuthenticatedAdminSubscriptionPlansRoute: typeof AuthenticatedAdminSubscriptionPlansRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedClientsIdRoute: typeof AuthenticatedClientsIdRoute
@@ -645,8 +687,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminIncomeCategoriesRoute:
     AuthenticatedAdminIncomeCategoriesRoute,
   AuthenticatedAdminLeadSourcesRoute: AuthenticatedAdminLeadSourcesRoute,
+  AuthenticatedAdminPaymentMethodsRoute: AuthenticatedAdminPaymentMethodsRoute,
   AuthenticatedAdminPriceListsRoute: AuthenticatedAdminPriceListsRoute,
   AuthenticatedAdminRolesRoute: AuthenticatedAdminRolesRoute,
+  AuthenticatedAdminServicesRoute: AuthenticatedAdminServicesRoute,
   AuthenticatedAdminSubscriptionPlansRoute:
     AuthenticatedAdminSubscriptionPlansRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
