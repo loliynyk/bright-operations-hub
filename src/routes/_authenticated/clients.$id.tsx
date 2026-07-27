@@ -297,12 +297,14 @@ function ContractCard({ contract, lookups, attachments, branchId, chargesCount }
             <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
             <SelectContent>{services.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
           </Select>
+          {isDraft && services.length === 0 ? <EmptySelectHint to="/admin/services" label="Створити послугу для цієї філії" /> : null}
         </Field>
         <Field label="Тарифний план *">
           <Select value={merged.plan_id ?? ""} onValueChange={(v) => setPatch({ ...patch, plan_id: v, price_version_id: null })} disabled={!isDraft}>
             <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
             <SelectContent>{plans.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
           </Select>
+          {isDraft && plans.length === 0 ? <EmptySelectHint to="/admin/subscription-plans" label="Створити тарифний план" /> : null}
         </Field>
         <Field label="Версія цін *">
           <Select value={merged.price_version_id ?? ""} onValueChange={(v) => {
@@ -312,12 +314,14 @@ function ContractCard({ contract, lookups, attachments, branchId, chargesCount }
             <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
             <SelectContent>{prices.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name} — {p.monthly_price} ₴</SelectItem>)}</SelectContent>
           </Select>
+          {isDraft && merged.plan_id && prices.length === 0 ? <EmptySelectHint to="/admin/subscription-plans" label="Додати чинну версію ціни для плану" /> : null}
         </Field>
         <Field label="Знижка">
           <Select value={merged.discount_id ?? ""} onValueChange={(v) => setPatch({ ...patch, discount_id: v || null })} disabled={!isDraft}>
             <SelectTrigger><SelectValue placeholder="Без знижки" /></SelectTrigger>
             <SelectContent>{(lookups?.discounts ?? []).map((d: any) => <SelectItem key={d.id} value={d.id}>{d.name} ({d.type === "percentage" ? `${d.value}%` : `${d.value} ₴`})</SelectItem>)}</SelectContent>
           </Select>
+          {isDraft && (lookups?.discounts ?? []).length === 0 ? <EmptySelectHint to="/admin/discounts" label="Створити знижку" /> : null}
         </Field>
         <Field label="Місячна ціна (₴) *"><Input type="number" value={merged.monthly_price ?? 0} onChange={(e) => setPatch({ ...patch, monthly_price: e.target.value })} disabled={!isDraft} /></Field>
         <Field label="Ручна знижка (₴)"><Input type="number" value={merged.manual_discount ?? 0} onChange={(e) => setPatch({ ...patch, manual_discount: e.target.value })} disabled={!isDraft} /></Field>
