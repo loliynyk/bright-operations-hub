@@ -77,3 +77,16 @@ export function monthsBetween(startISO: string, endISO: string): string[] {
   }
   return out;
 }
+
+/**
+ * Billing horizon: end of the current quarter plus the next full quarter.
+ * Returned as first-of-month ISO representing the LAST month included.
+ */
+export function endOfNextQuarterISO(from: Date = new Date()): string {
+  const y = from.getFullYear();
+  const q = Math.floor(from.getMonth() / 3); // 0..3
+  // last month of "current quarter + next quarter" = month index q*3 + 5
+  const targetMonth = q * 3 + 5;
+  const d = new Date(y, targetMonth, 1);
+  return firstOfMonthISO(d);
+}
