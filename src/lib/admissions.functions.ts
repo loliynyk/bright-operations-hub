@@ -247,6 +247,36 @@ export const recalcContractCharges = createServerFn({ method: "POST" })
 export const generateInitialCharges = recalcContractCharges;
 
 // ============================================================
+// Quarterly extension — safe idempotent RPC-style action.
+// Iterates all active confirmed/generated/signed contracts and
+// re-runs recalc so their charges cover through end of next quarter.
+// ============================================================
+export const extendChargesNextQuarter = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ branch_id: z.string().uuid().nullable().optional() }).parse(d ?? {}))
+  .handler(async ({ context, data }) => {
+    const { supabase } = context;
+    let q = supabase
+      .from("contracts")
+      .select("id, branch_id, status, recalc_locked")
+      .in("status", ["confirmed", "generated", "signed"]);
+    if (data.branch_id) q = q.eq("branch_id", data.branch_id);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    const results: Array<{ contract_id: string; created: number; credit_applied: number; error?: string }> = [];
+    for (const r of rows ?? []) {
+      if (r.recalc_locked) continue;
+      try {
+        const res = await recalcContractChargesInner(context, r.id);
+        results.push({ contract_id: r.id, created: res.created, credit_applied: res.credit_applied ?? 0 });
+      } catch (e: any) {
+        results.push({ contract_id: r.id, created: 0, credit_applied: 0, error: e?.message ?? String(e) });
+      }
+    }
+    return { contracts: results.length, results };
+  });
+
+// ============================================================
 // PDF generation — never overwrites contract.status.
 // ============================================================
 async function generateContractPdfInner(context: any, contractId: string) {
