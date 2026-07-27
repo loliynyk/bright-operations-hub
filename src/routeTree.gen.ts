@@ -41,6 +41,7 @@ import { Route as AuthenticatedAdminEmailTemplatesRouteImport } from './routes/_
 import { Route as AuthenticatedAdminDiscountsRouteImport } from './routes/_authenticated/admin.discounts'
 import { Route as AuthenticatedAdminContractTemplatesRouteImport } from './routes/_authenticated/admin.contract-templates'
 import { Route as AuthenticatedAdminBranchesRouteImport } from './routes/_authenticated/admin.branches'
+import { Route as AuthenticatedClientsChildrenIdRouteImport } from './routes/_authenticated/clients.children.$id'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -222,6 +223,12 @@ const AuthenticatedAdminBranchesRoute =
     path: '/admin/branches',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedClientsChildrenIdRoute =
+  AuthenticatedClientsChildrenIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedClientsChildrenRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -243,7 +250,7 @@ export interface FileRoutesByFullPath {
   '/admin/subscription-plans': typeof AuthenticatedAdminSubscriptionPlansRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/clients/$id': typeof AuthenticatedClientsIdRoute
-  '/clients/children': typeof AuthenticatedClientsChildrenRoute
+  '/clients/children': typeof AuthenticatedClientsChildrenRouteWithChildren
   '/finance/cash-flow': typeof AuthenticatedFinanceCashFlowRoute
   '/finance/charges': typeof AuthenticatedFinanceChargesRoute
   '/finance/contracts': typeof AuthenticatedFinanceContractsRoute
@@ -255,6 +262,7 @@ export interface FileRoutesByFullPath {
   '/leads/$id': typeof AuthenticatedLeadsIdRoute
   '/clients/': typeof AuthenticatedClientsIndexRoute
   '/leads/': typeof AuthenticatedLeadsIndexRoute
+  '/clients/children/$id': typeof AuthenticatedClientsChildrenIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -276,7 +284,7 @@ export interface FileRoutesByTo {
   '/admin/subscription-plans': typeof AuthenticatedAdminSubscriptionPlansRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/clients/$id': typeof AuthenticatedClientsIdRoute
-  '/clients/children': typeof AuthenticatedClientsChildrenRoute
+  '/clients/children': typeof AuthenticatedClientsChildrenRouteWithChildren
   '/finance/cash-flow': typeof AuthenticatedFinanceCashFlowRoute
   '/finance/charges': typeof AuthenticatedFinanceChargesRoute
   '/finance/contracts': typeof AuthenticatedFinanceContractsRoute
@@ -288,6 +296,7 @@ export interface FileRoutesByTo {
   '/leads/$id': typeof AuthenticatedLeadsIdRoute
   '/clients': typeof AuthenticatedClientsIndexRoute
   '/leads': typeof AuthenticatedLeadsIndexRoute
+  '/clients/children/$id': typeof AuthenticatedClientsChildrenIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -311,7 +320,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/subscription-plans': typeof AuthenticatedAdminSubscriptionPlansRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/clients/$id': typeof AuthenticatedClientsIdRoute
-  '/_authenticated/clients/children': typeof AuthenticatedClientsChildrenRoute
+  '/_authenticated/clients/children': typeof AuthenticatedClientsChildrenRouteWithChildren
   '/_authenticated/finance/cash-flow': typeof AuthenticatedFinanceCashFlowRoute
   '/_authenticated/finance/charges': typeof AuthenticatedFinanceChargesRoute
   '/_authenticated/finance/contracts': typeof AuthenticatedFinanceContractsRoute
@@ -323,6 +332,7 @@ export interface FileRoutesById {
   '/_authenticated/leads/$id': typeof AuthenticatedLeadsIdRoute
   '/_authenticated/clients/': typeof AuthenticatedClientsIndexRoute
   '/_authenticated/leads/': typeof AuthenticatedLeadsIndexRoute
+  '/_authenticated/clients/children/$id': typeof AuthenticatedClientsChildrenIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -358,6 +368,7 @@ export interface FileRouteTypes {
     | '/leads/$id'
     | '/clients/'
     | '/leads/'
+    | '/clients/children/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -391,6 +402,7 @@ export interface FileRouteTypes {
     | '/leads/$id'
     | '/clients'
     | '/leads'
+    | '/clients/children/$id'
   id:
     | '__root__'
     | '/'
@@ -425,6 +437,7 @@ export interface FileRouteTypes {
     | '/_authenticated/leads/$id'
     | '/_authenticated/clients/'
     | '/_authenticated/leads/'
+    | '/_authenticated/clients/children/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -659,8 +672,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminBranchesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/clients/children/$id': {
+      id: '/_authenticated/clients/children/$id'
+      path: '/$id'
+      fullPath: '/clients/children/$id'
+      preLoaderRoute: typeof AuthenticatedClientsChildrenIdRouteImport
+      parentRoute: typeof AuthenticatedClientsChildrenRoute
+    }
   }
 }
+
+interface AuthenticatedClientsChildrenRouteChildren {
+  AuthenticatedClientsChildrenIdRoute: typeof AuthenticatedClientsChildrenIdRoute
+}
+
+const AuthenticatedClientsChildrenRouteChildren: AuthenticatedClientsChildrenRouteChildren =
+  {
+    AuthenticatedClientsChildrenIdRoute: AuthenticatedClientsChildrenIdRoute,
+  }
+
+const AuthenticatedClientsChildrenRouteWithChildren =
+  AuthenticatedClientsChildrenRoute._addFileChildren(
+    AuthenticatedClientsChildrenRouteChildren,
+  )
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedOverviewRoute: typeof AuthenticatedOverviewRoute
@@ -680,7 +714,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminSubscriptionPlansRoute: typeof AuthenticatedAdminSubscriptionPlansRoute
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRoute
   AuthenticatedClientsIdRoute: typeof AuthenticatedClientsIdRoute
-  AuthenticatedClientsChildrenRoute: typeof AuthenticatedClientsChildrenRoute
+  AuthenticatedClientsChildrenRoute: typeof AuthenticatedClientsChildrenRouteWithChildren
   AuthenticatedFinanceCashFlowRoute: typeof AuthenticatedFinanceCashFlowRoute
   AuthenticatedFinanceChargesRoute: typeof AuthenticatedFinanceChargesRoute
   AuthenticatedFinanceContractsRoute: typeof AuthenticatedFinanceContractsRoute
@@ -716,7 +750,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedAdminSubscriptionPlansRoute,
   AuthenticatedAdminUsersRoute: AuthenticatedAdminUsersRoute,
   AuthenticatedClientsIdRoute: AuthenticatedClientsIdRoute,
-  AuthenticatedClientsChildrenRoute: AuthenticatedClientsChildrenRoute,
+  AuthenticatedClientsChildrenRoute:
+    AuthenticatedClientsChildrenRouteWithChildren,
   AuthenticatedFinanceCashFlowRoute: AuthenticatedFinanceCashFlowRoute,
   AuthenticatedFinanceChargesRoute: AuthenticatedFinanceChargesRoute,
   AuthenticatedFinanceContractsRoute: AuthenticatedFinanceContractsRoute,
