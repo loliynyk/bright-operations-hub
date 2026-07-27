@@ -331,3 +331,45 @@ export const getSetupReadiness = createServerFn({ method: "GET" })
       expenseCategories: (cats.count ?? 0) > 0,
     };
   });
+
+// -------- Branches --------
+export const listBranches = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("branches")
+      .select("id, name, address, phone, is_active, created_at")
+      .order("name");
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+const BranchSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().min(1),
+  address: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  is_active: z.boolean().default(true),
+});
+export const upsertBranch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => BranchSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { error } = await context.supabase.from("branches").upsert(data);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const archiveBranch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string; is_active: boolean }) => d)
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { error } = await context.supabase
+      .from("branches")
+      .update({ is_active: data.is_active })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
