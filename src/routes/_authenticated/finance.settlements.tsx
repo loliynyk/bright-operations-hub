@@ -13,8 +13,8 @@ import { getSettlements, getClientFinance } from "@/lib/finance.functions";
 import { listLookups } from "@/lib/lookups.functions";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import ChargesPage from "./finance.charges";
-import PaymentsPage from "./finance.payments";
+import { ChargesPage } from "./finance.charges";
+import { PaymentsPage } from "./finance.payments";
 
 export const Route = createFileRoute("/_authenticated/finance/settlements")({
   component: SettlementsPage,
