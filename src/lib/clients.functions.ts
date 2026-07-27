@@ -125,14 +125,35 @@ export const saveChild = createServerFn({ method: "POST" })
       payload.birth_date = assertValidBirthDate(payload.birth_date);
     }
 
-    // If a group is provided, ensure it belongs to the same branch and is active
-    // (unless it is the already-assigned historical group on this child).
+    // Server-side branch trust: on update, ignore any client-supplied
+    // branch_id and use the persisted row's branch_id. On insert, derive
+    // it from the parent client. This prevents cross-branch escapes via
+    // a manipulated payload (RLS still applies to the read/write below).
+    let effectiveBranchId: string;
+    if (id) {
+      const { data: row, error: re } = await supabase
+        .from("children").select("branch_id").eq("id", id).maybeSingle();
+      if (re) throw new Error(re.message);
+      if (!row) throw new Error("Дитину не знайдено");
+      effectiveBranchId = row.branch_id as string;
+    } else {
+      const { data: parent, error: pe } = await supabase
+        .from("clients").select("branch_id").eq("id", payload.client_id).maybeSingle();
+      if (pe) throw new Error(pe.message);
+      if (!parent) throw new Error("Клієнта не знайдено");
+      effectiveBranchId = parent.branch_id as string;
+    }
+    payload.branch_id = effectiveBranchId;
+
+    // If a group is provided, verify it belongs to the SAME (server-derived)
+    // branch and is active (unless it is the already-assigned historical
+    // group on this child). Do NOT trust the branch coming from the client.
     if (payload.group_id) {
       const { data: g, error: ge } = await supabase
         .from("groups").select("id, branch_id, is_active").eq("id", payload.group_id).maybeSingle();
       if (ge) throw new Error(ge.message);
       if (!g) throw new Error("Групу не знайдено");
-      if (g.branch_id !== payload.branch_id) {
+      if (g.branch_id !== effectiveBranchId) {
         throw new Error("Не можна призначити групу з іншої філії");
       }
       if (!g.is_active) {
