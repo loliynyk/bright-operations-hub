@@ -181,6 +181,15 @@ function firstOfMonth(o: number) {
   d.setMonth(d.getMonth() + o, 1);
   return d.toISOString().slice(0, 10);
 }
+function monthsAgoISO(n: number) {
+  const d = new Date();
+  d.setMonth(d.getMonth() - n, 1);
+  return d.toISOString().slice(0, 10);
+}
+
+  d.setMonth(d.getMonth() + o, 1);
+  return d.toISOString().slice(0, 10);
+}
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
