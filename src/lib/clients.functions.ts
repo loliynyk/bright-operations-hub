@@ -270,3 +270,48 @@ export const restoreChild = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ============================================================
+// Get one child with related client + active contract + charges.
+// Used by the dedicated child card.
+// ============================================================
+export const getChild = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    const { supabase } = context;
+    const { data: child, error } = await supabase
+      .from("children")
+      .select("*, group:group_id(id, name, is_active, capacity), clients:client_id(id, parent_first_name, parent_last_name, phone, email, branch_id)")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!child) throw new Error("Дитину не знайдено");
+    const [{ data: contracts }, { data: charges }] = await Promise.all([
+      supabase.from("contracts").select("id, number, status, monthly_price, start_date, end_date, plan_id, service_id, updated_at").eq("child_id", data.id).order("updated_at", { ascending: false }),
+      supabase.from("charges").select("id, contract_id, period_month, amount, paid_amount, status").eq("client_id", child.client_id).order("period_month", { ascending: false }),
+    ]);
+    return { child, contracts: contracts ?? [], charges: charges ?? [] };
+  });
+
+// ============================================================
+// Complete child attendance — transactional via RPC.
+// ============================================================
+export const completeChildAttendance = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      id: z.string().uuid(),
+      end_date: z.string().min(1),
+      reason: z.string().max(500).nullable().optional(),
+    }).parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    const { data: res, error } = await context.supabase.rpc("complete_child_attendance", {
+      _child_id: data.id,
+      _end_date: data.end_date,
+      _reason: (data.reason ?? null) as any,
+    });
+    if (error) throw new Error(error.message);
+    return res as { ok: boolean; charges_cancelled: number; contract_id: string | null; contract_closed: boolean };
+  });
+

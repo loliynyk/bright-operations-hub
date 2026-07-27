@@ -81,9 +81,9 @@ function ChildrenPage() {
       header: "Дитина",
       sortAccessor: (r) => `${r.last_name ?? ""} ${r.first_name}`.toLowerCase(),
       render: (r) => (
-        <span className="font-medium">
+        <Link to="/clients/children/$id" params={{ id: r.id }} className="font-medium text-primary hover:underline">
           {r.first_name} {r.last_name ?? ""}
-        </span>
+        </Link>
       ),
     },
     {
@@ -115,7 +115,7 @@ function ChildrenPage() {
     <PageContainer>
       <PageHeader
         title="Діти"
-        description="Розподіл по групах, місткість та поточна заборгованість."
+        description="Хто, у якій групі та коли починає/завершує відвідування. Місткість груп і статус зарахування."
         actions={
           <div className="flex flex-wrap items-center gap-3">
             <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Пошук дитини..." className="w-56" />
@@ -210,6 +210,7 @@ function GroupCard({ group, rows, activeCount, upcoming, leaving }: any) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <th className="py-2 pr-4 w-10">№</th>
                 <th className="py-2 pr-4">Дитина</th>
                 <th className="py-2 pr-4">Батьки</th>
                 <th className="py-2 pr-4 hidden md:table-cell">Телефон</th>
@@ -218,15 +219,18 @@ function GroupCard({ group, rows, activeCount, upcoming, leaving }: any) {
                 <th className="py-2 pr-4 hidden lg:table-cell">Завершення</th>
                 <th className="py-2 pr-4 hidden md:table-cell">Договір</th>
                 <th className="py-2 pr-4 hidden md:table-cell">План / Послуга</th>
-                <th className="py-2 pr-4 text-right">Абонплата</th>
-                <th className="py-2 pr-4 text-right">Борг</th>
                 <th className="py-2 pr-4">Статус</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((c: any) => (
+              {rows.map((c: any, i: number) => (
                 <tr key={c.id} className="border-b last:border-0">
-                  <td className="py-2 pr-4 font-medium">{c.first_name} {c.last_name ?? ""}</td>
+                  <td className="py-2 pr-4 text-muted-foreground">{i + 1}</td>
+                  <td className="py-2 pr-4">
+                    <Link to="/clients/children/$id" params={{ id: c.id }} className="font-medium text-primary hover:underline">
+                      {c.first_name} {c.last_name ?? ""}
+                    </Link>
+                  </td>
                   <td className="py-2 pr-4">
                     <Link to="/clients/$id" params={{ id: c.client_id }} className="text-primary hover:underline">{c.parent_name || "—"}</Link>
                   </td>
@@ -236,8 +240,6 @@ function GroupCard({ group, rows, activeCount, upcoming, leaving }: any) {
                   <td className="py-2 pr-4 hidden lg:table-cell text-muted-foreground">{c.end_date ?? "—"}</td>
                   <td className="py-2 pr-4 hidden md:table-cell">{c.contract_status ? <StatusBadge tone={c.contract_status === "draft" ? "warning" : "success"}>{contractStatusLabel(c.contract_status)}</StatusBadge> : <span className="text-muted-foreground">—</span>}</td>
                   <td className="py-2 pr-4 hidden md:table-cell text-muted-foreground">{c.plan_name ?? c.service_name ?? "—"}</td>
-                  <td className="py-2 pr-4 text-right">{c.monthly_price != null ? `${c.monthly_price} ₴` : "—"}</td>
-                  <td className={`py-2 pr-4 text-right ${c.debt > 0 ? "font-semibold text-destructive" : "text-muted-foreground"}`}>{c.debt > 0 ? `${c.debt} ₴` : "—"}</td>
                   <td className="py-2 pr-4"><StatusBadge tone={toneForChild(c.status)}>{childStatusLabel(c.status)}</StatusBadge></td>
                 </tr>
               ))}
