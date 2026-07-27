@@ -275,7 +275,7 @@ function ContractCard({ contract, lookups, attachments, branchId, chargesCount }
         clientCreated
         childCreated
         contractConfirmed={isConfirmed}
-        chargesGenerated={isConfirmed}
+        chargesGenerated={Number(chargesCount ?? 0) > 0}
         pdfGenerated={hasPdf}
       />
 
