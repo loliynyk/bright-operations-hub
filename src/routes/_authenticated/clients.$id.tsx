@@ -620,3 +620,13 @@ function WorkflowStatuses(props: {
 function Field({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
   return <div className={`grid gap-1.5 ${wide ? "md:col-span-2" : ""}`}><Label className="text-xs">{label}</Label>{children}</div>;
 }
+
+function RecapRow({ n, label, value }: { n: number; label: string; value: string }) {
+  return (
+    <li className="flex items-baseline justify-between gap-3">
+      <span className="text-muted-foreground"><span className="text-xs">{n}.</span> {label}</span>
+      <span className="font-medium text-right">{value}</span>
+    </li>
+  );
+}
+
