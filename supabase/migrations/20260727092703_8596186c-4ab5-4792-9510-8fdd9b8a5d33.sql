@@ -1,0 +1,1 @@
+ALTER VIEW public.v_charge_balances SET (security_invoker = true);
