@@ -553,6 +553,8 @@ export type Database = {
           name: string
           type: Database["public"]["Enums"]["discount_type"]
           updated_at: string
+          valid_from: string | null
+          valid_to: string | null
           value: number
         }
         Insert: {
@@ -563,6 +565,8 @@ export type Database = {
           name: string
           type: Database["public"]["Enums"]["discount_type"]
           updated_at?: string
+          valid_from?: string | null
+          valid_to?: string | null
           value: number
         }
         Update: {
@@ -573,6 +577,8 @@ export type Database = {
           name?: string
           type?: Database["public"]["Enums"]["discount_type"]
           updated_at?: string
+          valid_from?: string | null
+          valid_to?: string | null
           value?: number
         }
         Relationships: [
@@ -634,6 +640,7 @@ export type Database = {
       }
       expense_categories: {
         Row: {
+          branch_id: string | null
           created_at: string
           id: string
           is_active: boolean
@@ -641,6 +648,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
@@ -648,13 +656,22 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          branch_id?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
           name?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "expense_categories_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       expenses: {
         Row: {
@@ -709,7 +726,9 @@ export type Database = {
       }
       groups: {
         Row: {
+          age_from: number | null
           age_range: string | null
+          age_to: number | null
           branch_id: string
           capacity: number | null
           created_at: string
@@ -719,7 +738,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          age_from?: number | null
           age_range?: string | null
+          age_to?: number | null
           branch_id: string
           capacity?: number | null
           created_at?: string
@@ -729,7 +750,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          age_from?: number | null
           age_range?: string | null
+          age_to?: number | null
           branch_id?: string
           capacity?: number | null
           created_at?: string
@@ -935,27 +958,41 @@ export type Database = {
       }
       payment_methods: {
         Row: {
+          branch_id: string | null
           created_at: string
           id: string
           is_active: boolean
           name: string
+          type: string | null
           updated_at: string
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
           name: string
+          type?: string | null
           updated_at?: string
         }
         Update: {
+          branch_id?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
           name?: string
+          type?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "payment_methods_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payments: {
         Row: {
