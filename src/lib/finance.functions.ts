@@ -105,12 +105,17 @@ export const getClientFinance = createServerFn({ method: "GET" })
   .inputValidator((d: { clientId: string }) => z.object({ clientId: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     const { supabase } = context;
+    const { data: client } = await supabase.from("clients").select("branch_id").eq("id", data.clientId).maybeSingle();
+    const branchId = client?.branch_id as string | undefined;
+    const methodsQuery = branchId
+      ? supabase.from("payment_methods").select("id, name, branch_id").eq("is_active", true).or(`branch_id.eq.${branchId},branch_id.is.null`)
+      : supabase.from("payment_methods").select("id, name, branch_id").eq("is_active", true).is("branch_id", null);
     const [charges, payments, credits, allocations, methods] = await Promise.all([
       supabase.from("charges").select("*").eq("client_id", data.clientId).order("period_month"),
       supabase.from("payments").select("*").eq("client_id", data.clientId).order("paid_at", { ascending: false }),
       supabase.from("client_credits").select("*").eq("client_id", data.clientId).gt("amount_remaining", 0),
       supabase.from("payment_allocations").select("id, payment_id, charge_id, amount"),
-      supabase.from("payment_methods").select("id, name").eq("is_active", true),
+      methodsQuery,
     ]);
     const chargeIds = new Set((charges.data ?? []).map((c: any) => c.id));
     const paymentIds = new Set((payments.data ?? []).map((p: any) => p.id));

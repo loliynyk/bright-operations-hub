@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getClientFinance, recordPayment, voidPayment, reallocatePayment } from "@/lib/finance.functions";
+import { EmptySelectHint } from "@/components/settings/empty-select-hint";
 
 type Charge = { id: string; period_month: string; amount: number; paid_amount: number; status: string; due_date: string | null; is_prorated: boolean };
 type Payment = { id: string; paid_at: string; amount: number; status: string; note: string | null; payment_method_id: string | null };
@@ -160,6 +161,7 @@ export function FinanceTab({ clientId, branchId }: { clientId: string; branchId:
                   <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                   <SelectContent>{(data.methods ?? []).map((m: any) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}</SelectContent>
                 </Select>
+                {(data.methods ?? []).length === 0 ? <EmptySelectHint to="/admin/payment-methods" label="Створити метод оплати" /> : null}
               </div>
               <div className="md:col-span-4"><Label className="text-xs">Нотатка</Label><Textarea rows={2} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} /></div>
             </div>

@@ -49,7 +49,7 @@ function ECForm({ row, branches, onSubmit }: any) {
     name: row?.name ?? "",
     is_active: row?.is_active ?? true,
   });
-  const m = useMutation({ mutationFn: () => onSubmit(v) });
+  const m = useMutation({ mutationFn: () => onSubmit(v), onError: (e: any) => toast.error("Помилка", { description: e.message }) });
   return (
     <div className="space-y-3">
       <div><Label>Назва</Label><Input value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} /></div>

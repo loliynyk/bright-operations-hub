@@ -307,8 +307,8 @@ export const getSetupReadiness = createServerFn({ method: "GET" })
       supabase.from("groups").select("id", { count: "exact", head: true }).eq("branch_id", bId).eq("is_active", true),
       supabase.from("services").select("id", { count: "exact", head: true }).eq("branch_id", bId).eq("is_active", true),
       supabase.from("subscription_plans").select("id").eq("is_active", true).or(`branch_id.eq.${bId},branch_id.is.null`),
-      supabase.from("payment_methods").select("id", { count: "exact", head: true }).eq("is_active", true),
-      supabase.from("expense_categories").select("id", { count: "exact", head: true }).eq("is_active", true),
+      supabase.from("payment_methods").select("id", { count: "exact", head: true }).eq("is_active", true).or(`branch_id.eq.${bId},branch_id.is.null`),
+      supabase.from("expense_categories").select("id", { count: "exact", head: true }).eq("is_active", true).or(`branch_id.eq.${bId},branch_id.is.null`),
     ]);
 
     let planWithValidPrice = false;
