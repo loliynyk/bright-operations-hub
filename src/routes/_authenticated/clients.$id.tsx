@@ -11,7 +11,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { getClient, updateClient, saveChild } from "@/lib/clients.functions";
+import { getClient, updateClient, saveChild, archiveChild, restoreChild } from "@/lib/clients.functions";
+import { childStatusLabel } from "@/lib/child-validation";
+import { StatusBadge } from "@/components/ds";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { listLookups } from "@/lib/lookups.functions";
 import {
   updateContract, confirmContract, generateContractPdf,
