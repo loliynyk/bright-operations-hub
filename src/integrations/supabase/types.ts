@@ -1353,10 +1353,21 @@ export type Database = {
         Returns: undefined
       }
       apply_credits_to_charge: { Args: { _charge_id: string }; Returns: number }
-      complete_child_attendance: {
-        Args: { _child_id: string; _end_date: string; _reason: string }
-        Returns: Json
-      }
+      complete_child_attendance:
+        | {
+            Args: { _child_id: string; _end_date: string; _reason: string }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _child_id: string
+              _end_date: string
+              _note?: string
+              _reason: string
+              _reason_code?: string
+            }
+            Returns: Json
+          }
       convert_lead_to_client: {
         Args: { _lead_id: string }
         Returns: {
@@ -1396,6 +1407,10 @@ export type Database = {
         Returns: undefined
       }
       recompute_one_charge: { Args: { _charge_id: string }; Returns: undefined }
+      reopen_child_attendance: {
+        Args: { _child_id: string; _note?: string }
+        Returns: Json
+      }
       void_payment: { Args: { _payment_id: string }; Returns: undefined }
     }
     Enums: {
