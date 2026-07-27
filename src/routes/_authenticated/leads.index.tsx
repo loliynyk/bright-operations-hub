@@ -108,7 +108,6 @@ function LeadsIndex() {
               ))}
             </SelectContent>
           </Select>
-          </Select>
         </div>
         <DataTable
           rows={filtered}
