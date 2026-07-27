@@ -10,7 +10,7 @@ import { useBranch } from "@/lib/branch-context";
 import { listChildrenByGroup } from "@/lib/finance.functions";
 import { childStatusLabel, contractStatusLabel } from "@/lib/child-validation";
 
-export const Route = createFileRoute("/_authenticated/clients/children")({
+export const Route = createFileRoute("/_authenticated/clients/children/")({
   component: ChildrenPage,
   head: () => ({ meta: [
     { title: "Діти — Bright OS" },
