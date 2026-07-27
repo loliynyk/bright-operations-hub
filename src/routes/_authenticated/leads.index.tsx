@@ -106,7 +106,8 @@ function LeadsIndex() {
                   {s.label}
                 </SelectItem>
               ))}
-            </Select>
+            </SelectContent>
+          </Select>
           </Select>
         </div>
         <DataTable
