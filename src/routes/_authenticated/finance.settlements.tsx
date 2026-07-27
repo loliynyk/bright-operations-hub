@@ -51,11 +51,11 @@ function SettlementsPage() {
   });
 
   const { data: lookups } = useQuery({
-    queryKey: ["lookups", branch.id],
-    queryFn: () => lookupsFn({ data: { branch_id: branch.id } }),
+    queryKey: ["lookups"],
+    queryFn: () => lookupsFn(),
   });
 
-  const activeGroups = (lookups?.groups ?? []).filter((g: any) => g.is_active);
+  const activeGroups = (lookups?.groups ?? []).filter((g: any) => !branch.id || g.branch_id === branch.id);
 
   const filtered = useMemo(() => {
     const rows = data?.rows ?? [];
