@@ -9,14 +9,32 @@ import {
 
 export const listClients = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+  .inputValidator((d: { branch_id?: string | null } | undefined) =>
+    z.object({ branch_id: z.string().uuid().nullable().optional() }).parse(d ?? {}),
+  )
+  .handler(async ({ context, data }) => {
+    let q = context.supabase
       .from("clients")
       .select("id, parent_first_name, parent_last_name, phone, email, status, branch_id, created_at")
       .order("created_at", { ascending: false })
-      .limit(200);
+      .limit(1000);
+    if (data.branch_id) q = q.eq("branch_id", data.branch_id);
+    const { data: clients, error } = await q;
     if (error) throw new Error(error.message);
-    return data ?? [];
+    const ids = (clients ?? []).map((c: any) => c.id);
+    if (ids.length === 0) return [];
+    const { data: kids } = await context.supabase
+      .from("children")
+      .select("client_id, start_date")
+      .in("client_id", ids);
+    const startByClient = new Map<string, string>();
+    for (const k of kids ?? []) {
+      if (!k.start_date) continue;
+      const cur = startByClient.get(k.client_id as string);
+      const s = String(k.start_date);
+      if (!cur || s < cur) startByClient.set(k.client_id as string, s);
+    }
+    return (clients ?? []).map((c: any) => ({ ...c, start_date: startByClient.get(c.id) ?? null }));
   });
 
 export const getClient = createServerFn({ method: "GET" })
