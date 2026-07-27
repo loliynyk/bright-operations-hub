@@ -1353,6 +1353,10 @@ export type Database = {
         Returns: undefined
       }
       apply_credits_to_charge: { Args: { _charge_id: string }; Returns: number }
+      complete_child_attendance: {
+        Args: { _child_id: string; _end_date: string; _reason: string }
+        Returns: Json
+      }
       convert_lead_to_client: {
         Args: { _lead_id: string }
         Returns: {
