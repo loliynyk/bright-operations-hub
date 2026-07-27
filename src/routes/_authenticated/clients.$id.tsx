@@ -172,7 +172,7 @@ function ChildrenTab({ clientId, branchId, children, lookups }: any) {
   );
 }
 
-function ContractCard({ contract, lookups, attachments, branchId }: any) {
+function ContractCard({ contract, lookups, attachments, branchId, chargesCount }: any) {
   const qc = useQueryClient();
   const updateFn = useServerFn(updateContract);
   const confirmFn = useServerFn(confirmContract);
