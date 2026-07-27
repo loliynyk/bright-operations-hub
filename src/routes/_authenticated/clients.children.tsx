@@ -118,7 +118,7 @@ function GroupCard({ group, rows, activeCount, upcoming, leaving }: any) {
           {available != null ? <span className={over ? "text-destructive font-semibold" : "text-muted-foreground"}>Місць: {available}</span> : null}
           {upcoming ? <span className="text-primary">Заплановано: {upcoming}</span> : null}
           {leaving ? <span className="text-amber-600">Завершуються: {leaving}</span> : null}
-          {over ? <StatusBadge tone="destructive">Перевищено</StatusBadge> : capacity && fill >= 0.85 ? <StatusBadge tone="warning">Майже повна</StatusBadge> : null}
+          {over ? <StatusBadge tone="danger">Перевищено</StatusBadge> : capacity && fill >= 0.85 ? <StatusBadge tone="warning">Майже повна</StatusBadge> : null}
         </div>
       </div>
       {capacity ? (
