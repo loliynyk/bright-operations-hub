@@ -35,7 +35,7 @@ function DiscountsPage() {
         { header: "Період", render: (r: any) => r.valid_from || r.valid_to ? `${r.valid_from ?? "…"} – ${r.valid_to ?? "…"}` : "—" },
       ]}
       renderForm={({ row, onDone }) => (
-        <DiscountForm row={row} onSubmit={(v) => upsertFn({ data: v }).then(() => { toast.success("Збережено"); onDone(); })} />
+        <DiscountForm row={row} onSubmit={(v: any) => upsertFn({ data: v }).then(() => { toast.success("Збережено"); onDone(); })} />
       )}
     />
   );

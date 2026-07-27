@@ -36,7 +36,7 @@ function ExpCatsPage() {
         { header: "Філія", render: (r: any) => (lookups?.branches ?? []).find((b: any) => b.id === r.branch_id)?.name ?? "Всі" },
       ]}
       renderForm={({ row, onDone }) => (
-        <ECForm row={row} branches={lookups?.branches ?? []} onSubmit={(v) => upsertFn({ data: v }).then(() => { toast.success("Збережено"); onDone(); })} />
+        <ECForm row={row} branches={lookups?.branches ?? []} onSubmit={(v: any) => upsertFn({ data: v }).then(() => { toast.success("Збережено"); onDone(); })} />
       )}
     />
   );

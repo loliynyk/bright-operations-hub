@@ -44,7 +44,7 @@ function ServicesPage() {
           row={row}
           branches={lookups?.branches ?? []}
           defaultBranch={branch.id}
-          onSubmit={(v) => upsertFn({ data: v }).then(() => { toast.success("Збережено"); onDone(); })}
+          onSubmit={(v: any) => upsertFn({ data: v }).then(() => { toast.success("Збережено"); onDone(); })}
         />
       )}
     />
