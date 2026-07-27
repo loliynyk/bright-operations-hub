@@ -42,22 +42,26 @@ export const getClient = createServerFn({ method: "GET" })
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
     const { supabase } = context;
-    const [client, children, contracts, timeline, attachments, charges] = await Promise.all([
+    const [client, children, contracts, timeline, attachments, charges, payments] = await Promise.all([
       supabase.from("clients").select("*").eq("id", data.id).maybeSingle(),
       supabase.from("children").select("*, group:group_id(id, name, is_active)").eq("client_id", data.id).order("created_at"),
       supabase.from("contracts").select("*").eq("client_id", data.id).order("created_at", { ascending: false }),
       supabase.from("timeline_events").select("*").eq("client_id", data.id).order("created_at", { ascending: false }),
       supabase.from("client_attachments").select("*").eq("client_id", data.id).order("created_at", { ascending: false }),
-      supabase.from("charges").select("id, contract_id").eq("client_id", data.id),
+      supabase.from("charges").select("id, contract_id, period_month, amount, status").eq("client_id", data.id).order("period_month"),
+      supabase.from("payments").select("id, status").eq("client_id", data.id).limit(200),
     ]);
     if (client.error) throw new Error(client.error.message);
     if (!client.data) throw new Error("Клієнта не знайдено");
     const chargeCountByContract: Record<string, number> = {};
+    const chargesByContract: Record<string, Array<{ id: string; period_month: string; amount: number; status: string }>> = {};
     for (const c of charges.data ?? []) {
       const cid = c.contract_id as string | null;
       if (!cid) continue;
       chargeCountByContract[cid] = (chargeCountByContract[cid] ?? 0) + 1;
+      (chargesByContract[cid] ||= []).push({ id: c.id as string, period_month: c.period_month as string, amount: Number(c.amount), status: c.status as string });
     }
+    const hasPayment = (payments.data ?? []).some((p: any) => p.status === "posted");
     return {
       client: client.data,
       children: children.data ?? [],
@@ -65,6 +69,8 @@ export const getClient = createServerFn({ method: "GET" })
       timeline: timeline.data ?? [],
       attachments: attachments.data ?? [],
       chargeCountByContract,
+      chargesByContract,
+      hasPayment,
     };
   });
 

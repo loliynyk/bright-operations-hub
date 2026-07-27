@@ -147,9 +147,12 @@ export function FinanceTab({ clientId, branchId }: { clientId: string; branchId:
         )}
       </SectionCard>
 
-      <SectionCard title="Платежі" description="FIFO розподіл на найстаріші нарахування. Залишок стає кредитом.">
-        <div className="mb-3 flex justify-end">
-          {!showForm ? <PrimaryButton onClick={() => setShowForm(true)}>Прийняти платіж</PrimaryButton> : null}
+      <SectionCard title="Платежі" description="Прийом платежів клієнта. Кошти автоматично розподіляються FIFO на найстаріші відкриті нарахування; надлишок стає кредитом клієнта.">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">
+            Це основна точка вводу оплат від клієнта. Ті самі дії доступні у <strong>Розрахунки</strong>.
+          </p>
+          {!showForm ? <PrimaryButton onClick={() => setShowForm(true)}>Додати платіж</PrimaryButton> : null}
         </div>
         {showForm ? (
           <div className="mb-4 rounded-lg border border-border bg-muted/30 p-4">
