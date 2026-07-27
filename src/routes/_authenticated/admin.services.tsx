@@ -59,7 +59,7 @@ function ServiceForm({ row, branches, defaultBranch, onSubmit }: any) {
     description: row?.description ?? "",
     is_active: row?.is_active ?? true,
   });
-  const m = useMutation({ mutationFn: () => onSubmit(v) });
+  const m = useMutation({ mutationFn: () => onSubmit(v), onError: (e: any) => toast.error("Помилка", { description: e.message }) });
   return (
     <div className="space-y-3">
       <div><Label>Філія</Label>
