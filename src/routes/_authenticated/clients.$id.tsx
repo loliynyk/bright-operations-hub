@@ -123,43 +123,96 @@ function ClientDetail() {
 function ChildrenTab({ clientId, branchId, children, lookups }: any) {
   const qc = useQueryClient();
   const saveFn = useServerFn(saveChild);
+  const archiveFn = useServerFn(archiveChild);
+  const restoreFn = useServerFn(restoreChild);
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["client", clientId] });
+    qc.invalidateQueries({ queryKey: ["children-by-group"] });
+  };
   const mutation = useMutation({
     mutationFn: (data: any) => saveFn({ data }),
-    onSuccess: () => { toast.success("Збережено"); qc.invalidateQueries({ queryKey: ["client", clientId] }); },
+    onSuccess: () => { toast.success("Збережено"); invalidate(); },
     onError: (e: any) => toast.error("Помилка", { description: e.message }),
+  });
+  const archiveMut = useMutation({
+    mutationFn: (v: { id: string; reason?: string | null }) => archiveFn({ data: v }),
+    onSuccess: () => { toast.success("Дитину переміщено в архів"); invalidate(); },
+    onError: (e: any) => toast.error("Не вдалося архівувати", { description: e.message }),
+  });
+  const restoreMut = useMutation({
+    mutationFn: (id: string) => restoreFn({ data: { id } }),
+    onSuccess: () => { toast.success("Дитину відновлено"); invalidate(); },
+    onError: (e: any) => toast.error("Не вдалося відновити", { description: e.message }),
   });
   const [adding, setAdding] = useState(false);
   const [newChild, setNewChild] = useState({ first_name: "", last_name: "", birth_date: "" });
+  const [archiveOpen, setArchiveOpen] = useState<string | null>(null);
+  const [archiveReason, setArchiveReason] = useState("");
 
-  const groupOptions = (lookups?.groups ?? []).filter((g: any) => g.branch_id === branchId);
+  // Active-only groups for new assignment, filtered by branch.
+  const activeGroupOptions = (lookups?.groups ?? []).filter((g: any) => g.branch_id === branchId && g.is_active !== false);
   return (
     <div className="space-y-4">
       {children.map((child: any) => {
         // Include the currently-assigned group even if archived, so history is not lost.
         const currentGroup = child.group;
-        const optionsForChild = currentGroup && !groupOptions.some((g: any) => g.id === currentGroup.id)
-          ? [...groupOptions, { id: currentGroup.id, name: `${currentGroup.name} (архів)`, branch_id: branchId }]
-          : groupOptions;
+        const isCurrentArchived = currentGroup && currentGroup.is_active === false;
+        const optionsForChild = currentGroup && !activeGroupOptions.some((g: any) => g.id === currentGroup.id)
+          ? [...activeGroupOptions, { id: currentGroup.id, name: `${currentGroup.name}${isCurrentArchived ? " (архів)" : ""}`, branch_id: branchId }]
+          : activeGroupOptions;
+        const isArchived = child.status === "archived";
         return (
           <SectionCard key={child.id}>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-medium">{child.first_name} {child.last_name}</p>
-                <p className="text-sm text-muted-foreground">Народжений(а): {child.birth_date ?? "—"} · Статус: {child.status}</p>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-medium">{child.first_name} {child.last_name ?? ""}</p>
+                  <StatusBadge tone={toneForChildStatus(child.status)}>{childStatusLabel(child.status)}</StatusBadge>
+                </div>
+                <p className="text-sm text-muted-foreground">Народжений(а): {child.birth_date ?? "—"}</p>
               </div>
-              <div className="w-56">
-                <Label className="text-xs">Група</Label>
-                <Select value={child.group_id ?? ""} onValueChange={(v) => mutation.mutate({ id: child.id, client_id: clientId, branch_id: branchId, first_name: child.first_name, group_id: v || null } as any)}>
-                  <SelectTrigger className="mt-1 h-8"><SelectValue placeholder="—" /></SelectTrigger>
-                  <SelectContent>
-                    {optionsForChild.map((g: any) => (
-                      <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {groupOptions.length === 0 ? (
-                  <EmptySelectHint to="/admin/groups" label="Створити першу групу" />
-                ) : null}
+              <div className="flex items-start gap-3">
+                <div className="w-56">
+                  <Label className="text-xs">Група</Label>
+                  <Select value={child.group_id ?? ""} onValueChange={(v) => mutation.mutate({ id: child.id, client_id: clientId, branch_id: branchId, first_name: child.first_name, last_name: child.last_name ?? null, group_id: v || null } as any)}>
+                    <SelectTrigger className="mt-1 h-8"><SelectValue placeholder="—" /></SelectTrigger>
+                    <SelectContent>
+                      {optionsForChild.map((g: any) => (
+                        <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {activeGroupOptions.length === 0 ? (
+                    <EmptySelectHint to="/admin/groups" label="Створити першу групу" />
+                  ) : null}
+                </div>
+                {isArchived ? (
+                  <Button variant="ghost" size="sm" onClick={() => restoreMut.mutate(child.id)} disabled={restoreMut.isPending}>Відновити</Button>
+                ) : (
+                  <AlertDialog open={archiveOpen === child.id} onOpenChange={(o) => { setArchiveOpen(o ? child.id : null); if (!o) setArchiveReason(""); }}>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="sm">В архів</Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Перемістити дитину в архів?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {child.first_name} {child.last_name ?? ""} буде виключена з активної місткості групи, але залишиться в історії клієнта.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <div className="pt-2">
+                        <Label className="text-xs">Причина (необов'язково)</Label>
+                        <Textarea rows={2} value={archiveReason} onChange={(e) => setArchiveReason(e.target.value)} placeholder="Напр.: тестовий запис, помилка вводу" />
+                      </div>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Скасувати</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => { archiveMut.mutate({ id: child.id, reason: archiveReason.trim() || null }); setArchiveOpen(null); setArchiveReason(""); }}
+                        >Перемістити в архів</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </div>
             </div>
           </SectionCard>
@@ -177,7 +230,7 @@ function ChildrenTab({ clientId, branchId, children, lookups }: any) {
             <Button onClick={() => {
               mutation.mutate({ client_id: clientId, branch_id: branchId, first_name: newChild.first_name, last_name: newChild.last_name || null, birth_date: newChild.birth_date || null } as any);
               setAdding(false); setNewChild({ first_name: "", last_name: "", birth_date: "" });
-            }} disabled={!newChild.first_name}>Додати</Button>
+            }} disabled={!newChild.first_name.trim()}>Додати</Button>
           </div>
         </SectionCard>
       ) : (
@@ -186,6 +239,17 @@ function ChildrenTab({ clientId, branchId, children, lookups }: any) {
     </div>
   );
 }
+
+function toneForChildStatus(status: string): any {
+  switch (status) {
+    case "active": return "success";
+    case "paused": return "warning";
+    case "graduated": return "info";
+    case "archived": return "neutral";
+    default: return "neutral";
+  }
+}
+
 
 function ContractCard({ contract, lookups, attachments, branchId, chargesCount }: any) {
   const qc = useQueryClient();
