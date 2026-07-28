@@ -1,9 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { GraduationCap, Plus, Archive, RotateCcw, Pencil } from "lucide-react";
+import { GraduationCap, Plus, Archive, RotateCcw } from "lucide-react";
 import { PageContainer, PageHeader, SectionCard, PrimaryButton, StatusBadge, EmptyState } from "@/components/ds";
 import { DataTable, type DataTableColumn } from "@/components/ds/data-table";
 import { Button } from "@/components/ui/button";
@@ -26,19 +26,21 @@ export const Route = createFileRoute("/_authenticated/staff")({
 function StaffPage() {
   const { branch } = useBranch();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const listFn = useServerFn(listEmployees);
   const saveFn = useServerFn(upsertEmployee);
   const arcFn = useServerFn(archiveEmployee);
-  const [editing, setEditing] = useState<any | null | undefined>(undefined);
+  const [creating, setCreating] = useState(false);
+  const [includeArchived, setIncludeArchived] = useState(false);
 
   const { data = [], isLoading } = useQuery({
-    queryKey: ["employees", branch.id],
-    queryFn: () => listFn({ data: { branch_id: branch.id || null } }),
+    queryKey: ["employees", branch.id, includeArchived],
+    queryFn: () => listFn({ data: { branch_id: branch.id || null, include_archived: includeArchived } }),
     enabled: !!branch.id,
   });
 
   const arc = useMutation({
-    mutationFn: (v: { id: string; is_active: boolean }) => arcFn({ data: v }),
+    mutationFn: (v: { id: string; archive: boolean }) => arcFn({ data: v }),
     onSuccess: () => {
       toast.success("Оновлено");
       qc.invalidateQueries({ queryKey: ["employees"] });
@@ -46,8 +48,15 @@ function StaffPage() {
     onError: (e: any) => toast.error("Помилка", { description: e.message }),
   });
 
+  const rows = data as any[];
 
-  const columns: DataTableColumn<any>[] = [
+  const columns: DataTableColumn<any>[] = useMemo(() => [
+    {
+      key: "employee_number",
+      header: "№",
+      sortAccessor: (r) => r.employee_number ?? "",
+      render: (r) => <span className="text-muted-foreground">{r.employee_number ?? "—"}</span>,
+    },
     {
       key: "full_name",
       header: "ПІБ",
@@ -65,44 +74,47 @@ function StaffPage() {
     {
       key: "status",
       header: "Статус",
-      sortAccessor: (r) => (r.is_active ? "1" : "0"),
-      render: (r) => (
-        <StatusBadge tone={r.is_active ? "success" : "neutral"}>
-          {r.is_active ? "Активний" : "Архів"}
-        </StatusBadge>
-      ),
+      sortAccessor: (r) => r.status ?? "",
+      render: (r) => {
+        const s = r.status ?? (r.is_active ? "active" : "archived");
+        const tone = s === "active" ? "success" : s === "paused" ? "warning" : "neutral";
+        const label = s === "active" ? "Активний" : s === "paused" ? "Пауза" : "Архів";
+        return <StatusBadge tone={tone}>{label}</StatusBadge>;
+      },
     },
     {
       key: "actions",
       header: "",
       align: "right",
-      render: (r) => (
-        <div className="flex justify-end gap-1">
-          <Button size="sm" variant="ghost" onClick={() => setEditing(r)}>
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
+      render: (r) => {
+        const isArchived = r.status === "archived" || r.is_active === false;
+        return (
           <Button
             size="sm"
             variant="ghost"
-            onClick={() => arc.mutate({ id: r.id, is_active: !r.is_active })}
+            onClick={() => arc.mutate({ id: r.id, archive: !isArchived })}
           >
-            {r.is_active ? <Archive className="h-3.5 w-3.5" /> : <RotateCcw className="h-3.5 w-3.5" />}
+            {isArchived ? <RotateCcw className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
           </Button>
-        </div>
-      ),
+        );
+      },
     },
-  ];
+  ], [arc]);
 
-  const rows = data as any[];
   return (
     <PageContainer>
       <PageHeader
         title="Працівники"
         description={`Штат філії ${branch.name}.`}
         actions={
-          <PrimaryButton size="sm" onClick={() => setEditing(null)}>
-            <Plus className="mr-1.5 h-4 w-4" /> Додати
-          </PrimaryButton>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setIncludeArchived((v) => !v)}>
+              {includeArchived ? "Приховати архів" : "Показати архів"}
+            </Button>
+            <PrimaryButton size="sm" onClick={() => setCreating(true)}>
+              <Plus className="mr-1.5 h-4 w-4" /> Додати
+            </PrimaryButton>
+          </div>
         }
       />
       <SectionCard>
@@ -119,26 +131,25 @@ function StaffPage() {
             isLoading={isLoading}
             defaultSort={{ key: "full_name", dir: "asc" }}
             emptyText="Немає працівників"
+            onRowClick={(row) => navigate({ to: "/staff/$id", params: { id: row.id } })}
           />
         )}
       </SectionCard>
 
-      <Dialog open={editing !== undefined} onOpenChange={(o) => !o && setEditing(undefined)}>
+      <Dialog open={creating} onOpenChange={(o) => !o && setCreating(false)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editing ? "Редагувати" : "Новий працівник"}</DialogTitle>
+            <DialogTitle>Новий працівник</DialogTitle>
           </DialogHeader>
-          {editing !== undefined ? (
-            <EmployeeForm
-              row={editing ?? null}
-              branchId={branch.id}
-              save={saveFn}
-              onDone={() => {
-                setEditing(undefined);
-                qc.invalidateQueries({ queryKey: ["employees"] });
-              }}
-            />
-          ) : null}
+          <QuickEmployeeForm
+            branchId={branch.id}
+            save={saveFn}
+            onCreated={(id) => {
+              setCreating(false);
+              qc.invalidateQueries({ queryKey: ["employees"] });
+              navigate({ to: "/staff/$id", params: { id } });
+            }}
+          />
           <DialogFooter />
         </DialogContent>
       </Dialog>
@@ -146,29 +157,41 @@ function StaffPage() {
   );
 }
 
-function EmployeeForm({ row, branchId, save, onDone }: any) {
+function QuickEmployeeForm({ branchId, save, onCreated }: any) {
   const [v, setV] = useState({
-    id: row?.id,
-    branch_id: row?.branch_id ?? branchId,
-    full_name: row?.full_name ?? "",
-    position: row?.position ?? "",
-    phone: row?.phone ?? "",
-    email: row?.email ?? "",
-    is_active: row?.is_active ?? true,
+    branch_id: branchId,
+    first_name: "",
+    last_name: "",
+    position: "",
+    phone: "",
+    email: "",
+    status: "active" as const,
   });
   const m = useMutation({
-    mutationFn: () => save({ data: v }),
-    onSuccess: () => {
-      toast.success("Збережено");
-      onDone();
+    mutationFn: () =>
+      save({
+        data: {
+          ...v,
+          full_name: [v.first_name, v.last_name].filter(Boolean).join(" ").trim(),
+        },
+      }),
+    onSuccess: (r: any) => {
+      toast.success("Створено");
+      onCreated(r.id);
     },
     onError: (e: any) => toast.error("Помилка", { description: e.message }),
   });
   return (
     <div className="grid gap-3">
-      <div>
-        <Label>ПІБ</Label>
-        <Input value={v.full_name} onChange={(e) => setV({ ...v, full_name: e.target.value })} />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Імʼя</Label>
+          <Input value={v.first_name} onChange={(e) => setV({ ...v, first_name: e.target.value })} />
+        </div>
+        <div>
+          <Label>Прізвище</Label>
+          <Input value={v.last_name} onChange={(e) => setV({ ...v, last_name: e.target.value })} />
+        </div>
       </div>
       <div>
         <Label>Посада</Label>
@@ -185,8 +208,8 @@ function EmployeeForm({ row, branchId, save, onDone }: any) {
         </div>
       </div>
       <div className="flex justify-end">
-        <Button onClick={() => m.mutate()} disabled={m.isPending || !v.full_name}>
-          Зберегти
+        <Button onClick={() => m.mutate()} disabled={m.isPending || (!v.first_name && !v.last_name)}>
+          Створити
         </Button>
       </div>
     </div>
