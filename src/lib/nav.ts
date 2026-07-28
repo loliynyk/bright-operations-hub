@@ -42,6 +42,7 @@ export const NAV: NavItem[] = [
     emoji: "💰",
     children: [
       { to: "/finance/settlements", label: "Розрахунки" },
+      { to: "/finance/payroll", label: "Зарплати" },
       { to: "/finance/expenses", label: "Витрати" },
       { to: "/finance/cash-flow", label: "Cash Flow" },
       { to: "/finance/pnl", label: "P&L" },
