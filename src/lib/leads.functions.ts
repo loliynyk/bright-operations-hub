@@ -31,7 +31,24 @@ export const getLead = createServerFn({ method: "GET" })
     if (!lead) throw new Error("Лід не знайдено");
     const { data: events } = await context.supabase
       .from("timeline_events").select("*").eq("lead_id", data.id).order("created_at", { ascending: false });
-    return { lead, events: events ?? [] };
+
+    // Related lifecycle records — surfaced on the lead detail page so staff
+    // can jump straight to the resulting client, children and contracts.
+    let client: any = null;
+    let children: any[] = [];
+    let contracts: any[] = [];
+    const clientId = (lead as any).converted_client_id as string | null;
+    if (clientId) {
+      const [cRes, kRes, ctRes] = await Promise.all([
+        context.supabase.from("clients").select("id, parent_first_name, parent_last_name, phone, email, status, created_at").eq("id", clientId).maybeSingle(),
+        context.supabase.from("children").select("id, first_name, last_name, birth_date, status").eq("client_id", clientId).order("created_at"),
+        context.supabase.from("contracts").select("id, number, status, start_date, monthly_price").eq("client_id", clientId).order("created_at", { ascending: false }),
+      ]);
+      client = cRes.data ?? null;
+      children = kRes.data ?? [];
+      contracts = ctRes.data ?? [];
+    }
+    return { lead, events: events ?? [], related: { client, children, contracts } };
   });
 
 const upsertSchema = z.object({
