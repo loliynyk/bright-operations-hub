@@ -29,6 +29,8 @@ export function DataTable<T extends { id: string }>({
   emptyText = "Немає записів",
   isLoading,
   totalLabel = "Всього",
+  onRowClick,
+  rowActions,
 }: {
   rows: T[];
   columns: DataTableColumn<T>[];
@@ -37,6 +39,8 @@ export function DataTable<T extends { id: string }>({
   emptyText?: string;
   isLoading?: boolean;
   totalLabel?: string;
+  onRowClick?: (row: T) => void;
+  rowActions?: (row: T) => ReactNode;
 }) {
   const [sort, setSort] = useState<SortState>(defaultSort);
   const [page, setPage] = useState(1);
