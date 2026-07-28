@@ -15,6 +15,7 @@ import { listLeads, saveLead } from "@/lib/leads.functions";
 import { listLookups } from "@/lib/lookups.functions";
 import { statusLabel, statusTone, sourceLabel, LEAD_STATUSES, LEAD_SOURCES } from "@/lib/leads";
 import { useBranch } from "@/lib/branch-context";
+import { LeadsFunnel } from "@/components/leads/leads-funnel";
 
 export const Route = createFileRoute("/_authenticated/leads/")({
   component: LeadsIndex,
