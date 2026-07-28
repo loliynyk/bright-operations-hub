@@ -20,21 +20,21 @@ export function TopBar() {
   const palette = useCommandPalette();
 
   return (
-    <header className="flex h-14 items-center gap-3 border-b border-border bg-background px-6">
+    <header className="flex h-14 items-center gap-3 border-b border-border bg-background/80 px-6 backdrop-blur-sm">
       <BranchSelector />
       <button
         onClick={() => palette.setOpen(true)}
-        className="mx-2 hidden max-w-md flex-1 items-center gap-2 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent md:flex"
+        className="mx-2 hidden max-w-md flex-1 items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm text-muted-foreground shadow-xs transition-all duration-150 hover:border-primary/30 hover:bg-muted md:flex"
       >
         <Search className="h-4 w-4" />
         <span className="flex-1 text-left">Пошук у Bright OS...</span>
-        <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-mono">⌘K</kbd>
+        <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground">⌘K</kbd>
       </button>
       <div className="flex-1 md:hidden" />
       <Button variant="ghost" size="icon" aria-label="Пошук" className="h-9 w-9 md:hidden" onClick={() => palette.setOpen(true)}>
         <Search className="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="icon" aria-label="Сповіщення" className="h-9 w-9">
+      <Button variant="ghost" size="icon" aria-label="Сповіщення" className="h-9 w-9 text-muted-foreground hover:text-foreground">
         <Bell className="h-4 w-4" />
       </Button>
       <DropdownMenu>

@@ -78,21 +78,21 @@ export function DataTable<T extends { id: string }>({
 
   return (
     <div>
-      <div className="overflow-x-auto rounded-lg border border-border">
+      <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-sm">
         <table className="w-full text-sm">
-          <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+          <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
-              <th className="w-12 px-3 py-2.5 text-right font-medium">№</th>
+              <th className="w-12 px-3 py-3 text-right font-medium">№</th>
               {columns.map((c) => {
                 const alignCls = c.align === "right" ? "text-right" : c.align === "center" ? "text-center" : "text-left";
                 const isSorted = sort?.key === c.key;
                 return (
-                  <th key={c.key} className={cn("px-4 py-2.5 font-medium", alignCls, c.className)}>
+                  <th key={c.key} className={cn("px-4 py-3 font-medium", alignCls, c.className)}>
                     {c.sortAccessor ? (
                       <button
                         type="button"
                         onClick={() => toggle(c.key)}
-                        className="inline-flex items-center gap-1 uppercase tracking-wide hover:text-foreground"
+                        className="inline-flex items-center gap-1 uppercase tracking-wide transition-colors hover:text-foreground"
                       >
                         {c.header}
                         {isSorted ? (
@@ -113,16 +113,16 @@ export function DataTable<T extends { id: string }>({
               })}
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody className="divide-y divide-border/60">
             {isLoading ? (
               <tr>
-                <td colSpan={columns.length + 1} className="px-4 py-10 text-center text-muted-foreground">
+                <td colSpan={columns.length + 1} className="px-4 py-12 text-center text-muted-foreground">
                   Завантаження…
                 </td>
               </tr>
             ) : pageRows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length + 1} className="px-4 py-10 text-center text-muted-foreground">
+                <td colSpan={columns.length + 1} className="px-4 py-12 text-center text-muted-foreground">
                   {emptyText}
                 </td>
               </tr>
@@ -130,13 +130,13 @@ export function DataTable<T extends { id: string }>({
               pageRows.map((row, i) => {
                 const abs = start + i;
                 return (
-                  <tr key={row.id} className="hover:bg-muted/30">
-                    <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">{abs + 1}</td>
+                  <tr key={row.id} className="transition-colors hover:bg-muted/40">
+                    <td className="px-3 py-3.5 text-right tabular-nums text-muted-foreground">{abs + 1}</td>
                     {columns.map((c) => {
                       const alignCls =
-                        c.align === "right" ? "text-right" : c.align === "center" ? "text-center" : "text-left";
+                        c.align === "right" ? "text-right tabular-nums" : c.align === "center" ? "text-center" : "text-left";
                       return (
-                        <td key={c.key} className={cn("px-4 py-3", alignCls, c.className)}>
+                        <td key={c.key} className={cn("px-4 py-3.5", alignCls, c.className)}>
                           {c.render(row, abs)}
                         </td>
                       );
