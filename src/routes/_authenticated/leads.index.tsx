@@ -122,13 +122,8 @@ function LeadsIndex() {
         }
       />
 
-      <KpiGrid className="xl:grid-cols-5">
-        <MetricCard label="Відкриті" value={String(kpis.open)} icon={UserPlus} tone="primary" />
-        <MetricCard label="Нові (міс.)" value={String(kpis.newMonth)} icon={TrendingUp} tone="info" />
-        <MetricCard label="Пробні / візити" value={String(kpis.trial)} icon={CalendarCheck} tone="warning" />
-        <MetricCard label="Конвертовані" value={String(kpis.converted)} icon={CheckCircle2} tone="success" />
-        <MetricCard label="Втрачені" value={String(kpis.lost)} icon={XCircle} tone="danger" />
-      </KpiGrid>
+
+
 
       <SectionCard>
         <LeadsFunnel leads={leads as any[]} activeStatuses={statusFilter} onSelectStage={(s) => setStatusFilter(s)} />
