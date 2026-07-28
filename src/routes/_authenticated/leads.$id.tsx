@@ -3,8 +3,9 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { ArrowLeft, UserPlus, Loader2 } from "lucide-react";
+import { ArrowLeft, UserPlus, Loader2, User, Baby, FileText } from "lucide-react";
 import { PageContainer, SectionCard, StatusBadge, PrimaryButton, SecondaryButton } from "@/components/ds";
+import { RelatedRecordsSection, EntityLink } from "@/components/ds/related-records";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -139,6 +140,45 @@ function LeadDetail() {
               </SelectContent>
             </Select>
           </SectionCard>
+
+          <RelatedRecordsSection description="Клієнт і діти, створені з цього ліда.">
+            {data.related?.client ? (
+              <EntityLink
+                to="/clients/$id"
+                params={{ id: data.related.client.id }}
+                icon={<User className="h-4 w-4" />}
+                label={`${data.related.client.parent_first_name ?? ""} ${data.related.client.parent_last_name ?? ""}`.trim() || "Клієнт"}
+                sublabel={data.related.client.phone ?? data.related.client.email ?? undefined}
+                right="Клієнт"
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">Клієнт ще не створений з цього ліда.</p>
+            )}
+            {(data.related?.children ?? []).map((k: any) => (
+              <EntityLink
+                key={k.id}
+                to="/clients/children/$id"
+                params={{ id: k.id }}
+                icon={<Baby className="h-4 w-4" />}
+                label={`${k.first_name ?? ""} ${k.last_name ?? ""}`.trim() || "Дитина"}
+                sublabel={k.birth_date ?? undefined}
+                right="Дитина"
+              />
+            ))}
+            {(data.related?.contracts ?? []).map((c: any) => (
+              <EntityLink
+                key={c.id}
+                to="/clients/$id"
+                params={{ id: data.related.client!.id }}
+                search={{ tab: "contract" }}
+                icon={<FileText className="h-4 w-4" />}
+                label={`Договір № ${c.number}`}
+                sublabel={c.start_date ?? undefined}
+                right={c.status}
+              />
+            ))}
+          </RelatedRecordsSection>
+
           <SectionCard title="Історія">
             <Timeline events={data.events as any} />
           </SectionCard>

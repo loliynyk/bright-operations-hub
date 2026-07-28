@@ -318,7 +318,7 @@ export const getChild = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data: child, error } = await supabase
       .from("children")
-      .select("*, group:group_id(id, name, is_active, capacity), clients:client_id(id, parent_first_name, parent_last_name, phone, email, branch_id)")
+      .select("*, group:group_id(id, name, is_active, capacity), clients:client_id(id, parent_first_name, parent_last_name, phone, email, branch_id, lead_id)")
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
