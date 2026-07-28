@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { ArrowLeft, CheckCircle2, Loader2, Pencil, RotateCcw, AlertTriangle } from "lucide-react";
 import { PageContainer, SectionCard, PrimaryButton, StatusBadge } from "@/components/ds";
+import { OriginBadge } from "@/components/ds/related-records";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -135,12 +136,13 @@ function ChildCard() {
         <Button variant="ghost" size="icon" onClick={() => navigate({ to: "/clients/children" })}><ArrowLeft className="h-4 w-4" /></Button>
         <div className="flex-1">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Дитина</p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl font-semibold tracking-tight">
               {child.first_name} {child.last_name ?? ""}
             </h1>
             <StatusBadge tone={toneForChildStatus(current.status)}>{childStatusLabel(current.status)}</StatusBadge>
             {age ? <span className="text-sm text-muted-foreground">· {age}</span> : null}
+            <OriginBadge leadId={child.clients?.lead_id ?? null} />
           </div>
           <p className="text-sm text-muted-foreground">
             Батьки: <Link to="/clients/$id" params={{ id: child.client_id }} search={{ tab: "main" }} className="text-primary hover:underline">{parentName}</Link>
