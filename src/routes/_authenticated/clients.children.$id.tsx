@@ -229,27 +229,10 @@ function ChildCard() {
               </AlertDialogContent>
             </AlertDialog>
           )}
-          {isArchived ? (
-            <Button variant="ghost" onClick={() => restoreMut.mutate()} disabled={restoreMut.isPending}>Швидке відновлення</Button>
-          ) : !isGraduated ? (
-            <AlertDialog open={archiveOpen} onOpenChange={(o) => { setArchiveOpen(o); if (!o) setArchiveReason(""); }}>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost">В архів</Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>В архів?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Використовується для помилкових/тестових записів. Дитина зникне з активних списків, історія збережеться.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <Textarea rows={2} value={archiveReason} onChange={(e) => setArchiveReason(e.target.value)} placeholder="Причина (необов'язково)" />
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Скасувати</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => archiveMut.mutate()}>Перемістити в архів</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+          {!form ? (
+            <Button variant="outline" onClick={() => setForm({ ...child })}>
+              <Pencil className="mr-2 h-4 w-4" />Редагувати
+            </Button>
           ) : null}
         </div>
       </div>
