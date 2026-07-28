@@ -94,11 +94,25 @@ function LeadsIndex() {
       />
 
       <SectionCard>
+        <LeadsFunnel
+          leads={leads as any[]}
+          activeStatuses={statusFilter}
+          onSelectStage={(statuses) => setStatusFilter(statuses)}
+        />
         <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
           <SearchInput value={q} onChange={(e) => setQ(e.target.value)} className="md:max-w-sm" />
-          <Select value={status} onValueChange={setStatus}>
+          <Select
+            value={statusFilter.length === 1 ? statusFilter[0] : statusFilter.length === 0 ? "all" : "__multi__"}
+            onValueChange={(v) => setStatusFilter(v === "all" ? [] : [v])}
+          >
             <SelectTrigger className="h-9 md:w-56">
-              <SelectValue />
+              <SelectValue>
+                {statusFilter.length === 0
+                  ? "Усі статуси"
+                  : statusFilter.length === 1
+                    ? statusLabel(statusFilter[0])
+                    : `Фільтр воронки (${statusFilter.length})`}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Усі статуси</SelectItem>
