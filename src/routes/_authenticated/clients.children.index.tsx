@@ -170,6 +170,13 @@ function ChildrenPage() {
         }
       />
 
+      <KpiGrid className="xl:grid-cols-4">
+        <MetricCard label="Усього" value={String(kpis.total)} icon={Baby} tone="primary" />
+        <MetricCard label="Активні" value={String(kpis.active)} icon={Users} tone="success" />
+        <MetricCard label="Заплановані" value={String(kpis.upcoming)} icon={CalendarPlus} tone="info" />
+        <MetricCard label="Завершуються" value={String(kpis.leaving)} icon={CalendarX} tone="warning" />
+      </KpiGrid>
+
       <Tabs value={view} onValueChange={(v) => setView(v as "groups" | "list")}>
         <TabsList>
           <TabsTrigger value="list">Список</TabsTrigger>
@@ -184,6 +191,18 @@ function ChildrenPage() {
               isLoading={isLoading || !filtered}
               defaultSort={{ key: "start_date", dir: "desc" }}
               emptyText="Дітей не знайдено за поточними фільтрами."
+              onRowClick={(r) => navigate({ to: "/clients/children/$id", params: { id: r.id } })}
+              rowActions={(r) => (
+                <RowActionsMenu
+                  actions={[
+                    { label: "Відкрити картку", icon: <ExternalLink className="h-3.5 w-3.5" />, onSelect: () => navigate({ to: "/clients/children/$id", params: { id: r.id } }) },
+                    { label: "Відкрити батьків", onSelect: () => navigate({ to: "/clients/$id", params: { id: r.client_id } }) },
+                    r.status !== "archived"
+                      ? { label: "Перевести в архів", icon: <Archive className="h-3.5 w-3.5" />, destructive: true, separatorBefore: true, onSelect: () => setArchiving(r) }
+                      : { label: "Відновити", icon: <ArchiveRestore className="h-3.5 w-3.5" />, separatorBefore: true, onSelect: () => setRestoring(r) },
+                  ]}
+                />
+              )}
             />
           </SectionCard>
         </TabsContent>
