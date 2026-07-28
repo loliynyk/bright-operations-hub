@@ -144,7 +144,7 @@ function StaffPage() {
           <QuickEmployeeForm
             branchId={branch.id}
             save={saveFn}
-            onCreated={(id) => {
+            onCreated={(id: string) => {
               setCreating(false);
               qc.invalidateQueries({ queryKey: ["employees"] });
               navigate({ to: "/staff/$id", params: { id } });
