@@ -619,10 +619,9 @@ function PaymentsTab() {
   const money = (n: number) => `${n.toFixed(0)} ₴`;
 
   const groups = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const r of rowsRaw) for (const c of r.children) if (c.group_id) m.set(c.group_id, c.group_name ?? "—");
-    return Array.from(m.entries()).map(([id, name]) => ({ id, name }));
-  }, [rowsRaw]);
+    const branchGroups = (lookups?.groups ?? []).filter((g: any) => !branch.id || !g.branch_id || g.branch_id === branch.id);
+    return branchGroups.map((g: any) => ({ id: g.id as string, name: g.name as string }));
+  }, [lookups, branch.id]);
 
   return (
     <>
