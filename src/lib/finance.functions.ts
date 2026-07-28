@@ -603,3 +603,346 @@ export const getSettlements = createServerFn({ method: "GET" })
 
     return { rows: out, totals };
   });
+
+// ============================================================
+// Invoices — enriched charge list with breakdown (base/discount/prorate/adjust).
+// ============================================================
+const invoicesSchema = z.object({
+  branch_id: z.string().uuid().nullable().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+  status: z.string().nullable().optional(),
+  group_id: z.string().uuid().nullable().optional(),
+  search: z.string().optional(),
+});
+export const listInvoices = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => invoicesSchema.parse(d ?? {}))
+  .handler(async ({ context, data }) => {
+    const { supabase } = context;
+    let q = supabase
+      .from("charges")
+      .select("id, period_month, amount, paid_amount, status, due_date, is_prorated, branch_id, client_id, contract_id, clients:client_id(parent_first_name, parent_last_name), contracts:contract_id(id, monthly_price, manual_discount, discount_id, start_date, end_date, child_id, discounts:discount_id(name, type, value), children:child_id(id, first_name, last_name, group_id, groups:group_id(id, name)))")
+      .neq("status", "cancelled")
+      .order("period_month", { ascending: false })
+      .limit(1000);
+    if (data.branch_id) q = q.eq("branch_id", data.branch_id);
+    if (data.from) q = q.gte("period_month", data.from);
+    if (data.to) q = q.lte("period_month", data.to);
+    if (data.status) q = q.eq("status", data.status as any);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+
+    const { computeEffectiveMonthly, computeMonthlyChargeAmount } = await import("@/lib/finance-math");
+    const search = (data.search ?? "").trim().toLowerCase();
+    const out = (rows ?? [])
+      .filter((r: any) => !data.group_id || r.contracts?.children?.group_id === data.group_id)
+      .filter((r: any) => {
+        if (!search) return true;
+        const name = `${r.clients?.parent_first_name ?? ""} ${r.clients?.parent_last_name ?? ""}`.toLowerCase();
+        const child = r.contracts?.children ? `${r.contracts.children.first_name ?? ""} ${r.contracts.children.last_name ?? ""}`.toLowerCase() : "";
+        return name.includes(search) || child.includes(search);
+      })
+      .map((r: any) => {
+        const c = r.contracts;
+        const base = Number(c?.monthly_price ?? 0);
+        const manual = Number(c?.manual_discount ?? 0);
+        const disc = c?.discounts ? { type: c.discounts.type, value: Number(c.discounts.value) } : null;
+        const effective = computeEffectiveMonthly(base, manual, disc);
+        const discountAmount = Math.max(0, Math.round((base - manual - effective) * 100) / 100);
+        const proration = c ? computeMonthlyChargeAmount({
+          periodMonthISO: String(r.period_month),
+          startDateISO: c.start_date,
+          endDateISO: c.end_date ?? null,
+          effectiveMonthly: effective,
+        }) : { amount: Number(r.amount), prorated: r.is_prorated, active_wd: 0, total_wd: 0 };
+        const expected = Math.round(proration.amount * 100) / 100;
+        const actual = Math.round(Number(r.amount) * 100) / 100;
+        const manualAdjust = Math.round((actual - expected) * 100) / 100;
+        const remaining = Math.max(0, Math.round((actual - Number(r.paid_amount ?? 0)) * 100) / 100);
+        return {
+          id: r.id,
+          period_month: r.period_month,
+          status: r.status,
+          due_date: r.due_date,
+          is_prorated: r.is_prorated,
+          client_id: r.client_id,
+          contract_id: r.contract_id,
+          client_name: `${r.clients?.parent_first_name ?? ""} ${r.clients?.parent_last_name ?? ""}`.trim() || "—",
+          child_name: r.contracts?.children
+            ? `${r.contracts.children.first_name ?? ""} ${r.contracts.children.last_name ?? ""}`.trim()
+            : "",
+          group_name: r.contracts?.children?.groups?.name ?? null,
+          amount: actual,
+          paid_amount: Number(r.paid_amount ?? 0),
+          remaining,
+          breakdown: {
+            base_price: Math.round(base * 100) / 100,
+            manual_discount: Math.round(manual * 100) / 100,
+            discount_amount: discountAmount,
+            discount_label: c?.discounts
+              ? `${c.discounts.name} (${c.discounts.type === "percentage" ? `${c.discounts.value}%` : `${c.discounts.value} ₴`})`
+              : null,
+            effective_monthly: Math.round(effective * 100) / 100,
+            active_wd: proration.active_wd,
+            total_wd: proration.total_wd,
+            expected_amount: expected,
+            manual_adjustment: manualAdjust,
+          },
+        };
+      });
+
+    const totals = out.reduce(
+      (s, r) => {
+        s.charged += r.amount;
+        s.paid += r.paid_amount;
+        s.remaining += r.remaining;
+        return s;
+      },
+      { charged: 0, paid: 0, remaining: 0 },
+    );
+    for (const k of Object.keys(totals) as (keyof typeof totals)[]) totals[k] = Math.round(totals[k] * 100) / 100;
+    return { rows: out, totals };
+  });
+
+// ============================================================
+// Client balances — rolling window aggregation for Оплати tab.
+// ============================================================
+const balancesSchema = z.object({
+  branch_id: z.string().uuid().nullable().optional(),
+  from: z.string(), // ISO first-of-month
+  to: z.string(),   // ISO first-of-month (inclusive)
+  group_id: z.string().uuid().nullable().optional(),
+  search: z.string().optional(),
+});
+export const listClientBalances = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => balancesSchema.parse(d))
+  .handler(async ({ context, data }) => {
+    const { supabase } = context;
+    let chQ = supabase
+      .from("charges")
+      .select("client_id, amount, paid_amount, period_month, status, due_date, contracts:contract_id(child_id, children:child_id(id, first_name, last_name, group_id, groups:group_id(id, name)))")
+      .neq("status", "cancelled");
+    if (data.branch_id) chQ = chQ.eq("branch_id", data.branch_id);
+    let payQ = supabase
+      .from("payments")
+      .select("client_id, amount, paid_at")
+      .eq("status", "posted")
+      .gte("paid_at", data.from)
+      .lte("paid_at", data.to + "T23:59:59Z");
+    if (data.branch_id) payQ = payQ.eq("branch_id", data.branch_id);
+    let crQ = supabase.from("client_credits").select("client_id, amount_remaining").gt("amount_remaining", 0);
+    if (data.branch_id) crQ = crQ.eq("branch_id", data.branch_id);
+    let clQ = supabase.from("clients").select("id, parent_first_name, parent_last_name, phone").eq("status", "active");
+    if (data.branch_id) clQ = clQ.eq("branch_id", data.branch_id);
+
+    const [charges, payments, credits, clients] = await Promise.all([chQ, payQ, crQ, clQ]);
+    for (const r of [charges, payments, credits, clients]) if ((r as any).error) throw new Error((r as any).error.message);
+
+    type Row = {
+      client_id: string;
+      client_name: string;
+      phone: string | null;
+      children: { id: string; name: string; group_id: string | null; group_name: string | null }[];
+      window_charged: number;
+      window_paid: number;
+      total_charged: number;
+      total_paid: number;
+      credit: number;
+      balance: number; // positive => "До сплати", negative => "Переплата"
+      oldest_unpaid_month: string | null;
+      max_days_overdue: number;
+    };
+    const map = new Map<string, Row>();
+    const ensure = (cid: string): Row => {
+      let r = map.get(cid);
+      if (!r) {
+        const cl = (clients.data ?? []).find((c: any) => c.id === cid);
+        r = {
+          client_id: cid,
+          client_name: cl ? `${cl.parent_first_name ?? ""} ${cl.parent_last_name ?? ""}`.trim() : "—",
+          phone: cl?.phone ?? null,
+          children: [],
+          window_charged: 0,
+          window_paid: 0,
+          total_charged: 0,
+          total_paid: 0,
+          credit: 0,
+          balance: 0,
+          oldest_unpaid_month: null,
+          max_days_overdue: 0,
+        };
+        map.set(cid, r);
+      }
+      return r;
+    };
+    // Pre-seed active clients so zero-activity families still surface.
+    for (const cl of clients.data ?? []) ensure(cl.id as string);
+
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const seenChild = new Set<string>();
+    for (const ch of charges.data ?? []) {
+      const r = ensure(ch.client_id as string);
+      const child: any = (ch as any).contracts?.children;
+      if (child && !seenChild.has(`${ch.client_id}:${child.id}`)) {
+        seenChild.add(`${ch.client_id}:${child.id}`);
+        r.children.push({
+          id: child.id,
+          name: `${child.first_name ?? ""} ${child.last_name ?? ""}`.trim() || "—",
+          group_id: child.group_id ?? null,
+          group_name: child.groups?.name ?? null,
+        });
+      }
+      const amt = Number(ch.amount);
+      const paid = Number(ch.paid_amount ?? 0);
+      const pm = String(ch.period_month);
+      r.total_charged += amt;
+      r.total_paid += paid;
+      if (pm >= data.from && pm <= data.to) r.window_charged += amt;
+      const remaining = amt - paid;
+      if (remaining > 0.005) {
+        if (!r.oldest_unpaid_month || pm < r.oldest_unpaid_month) r.oldest_unpaid_month = pm;
+        if (ch.due_date) {
+          const due = new Date(ch.due_date);
+          const days = Math.floor((today.getTime() - due.getTime()) / 86_400_000);
+          if (days > r.max_days_overdue) r.max_days_overdue = days;
+        }
+      }
+    }
+    for (const p of payments.data ?? []) {
+      const r = ensure(p.client_id as string);
+      r.window_paid += Number(p.amount);
+    }
+    for (const c of credits.data ?? []) {
+      const r = ensure(c.client_id as string);
+      r.credit += Number(c.amount_remaining);
+    }
+    let out = Array.from(map.values());
+    if (data.group_id) out = out.filter((r) => r.children.some((c) => c.group_id === data.group_id));
+    const search = (data.search ?? "").trim().toLowerCase();
+    if (search) {
+      out = out.filter((r) => r.client_name.toLowerCase().includes(search)
+        || r.children.some((c) => c.name.toLowerCase().includes(search)));
+    }
+    for (const r of out) {
+      r.window_charged = Math.round(r.window_charged * 100) / 100;
+      r.window_paid = Math.round(r.window_paid * 100) / 100;
+      r.total_charged = Math.round(r.total_charged * 100) / 100;
+      r.total_paid = Math.round(r.total_paid * 100) / 100;
+      r.credit = Math.round(r.credit * 100) / 100;
+      r.balance = Math.round((r.total_charged - r.total_paid - r.credit) * 100) / 100;
+    }
+    out.sort((a, b) => b.balance - a.balance || a.client_name.localeCompare(b.client_name));
+    const totals = out.reduce(
+      (s, r) => {
+        s.window_charged += r.window_charged;
+        s.window_paid += r.window_paid;
+        s.balance += r.balance;
+        s.credit += r.credit;
+        return s;
+      },
+      { window_charged: 0, window_paid: 0, balance: 0, credit: 0 },
+    );
+    for (const k of Object.keys(totals) as (keyof typeof totals)[]) totals[k] = Math.round(totals[k] * 100) / 100;
+    return { rows: out, totals };
+  });
+
+// ============================================================
+// Apply price change from the start of a chosen month.
+// Updates future unpaid charges (pending/overdue, paid_amount=0)
+// with period_month >= effective_month using the new price.
+// Past charges are never touched.
+// ============================================================
+const priceChangeSchema = z.object({
+  contract_id: z.string().uuid(),
+  new_monthly_price: z.number().positive(),
+  effective_month: z.string().min(7), // YYYY-MM or YYYY-MM-01
+});
+export const applyContractPriceChange = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => priceChangeSchema.parse(d))
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    const startMonth = data.effective_month.length === 7 ? `${data.effective_month}-01` : data.effective_month;
+
+    const { data: c, error: ce } = await supabase.from("contracts").select("*").eq("id", data.contract_id).maybeSingle();
+    if (ce) throw new Error(ce.message);
+    if (!c) throw new Error("Договір не знайдено");
+    if (c.status === "draft") throw new Error("Договір ще не підтверджено");
+    const oldPrice = Number(c.monthly_price ?? 0);
+
+    // Persist new price on contract (used by future recalc/extension).
+    const { error: ue } = await supabase.from("contracts").update({ monthly_price: data.new_monthly_price }).eq("id", c.id);
+    if (ue) throw new Error(ue.message);
+
+    // Resolve discount for effective recompute.
+    let disc: { type: "percentage" | "fixed"; value: number } | null = null;
+    if (c.discount_id) {
+      const { data: d } = await supabase.from("discounts").select("type, value").eq("id", c.discount_id).maybeSingle();
+      if (d) disc = { type: d.type, value: Number(d.value) };
+    }
+    const { computeEffectiveMonthly, computeMonthlyChargeAmount } = await import("@/lib/finance-math");
+    const effective = computeEffectiveMonthly(data.new_monthly_price, Number(c.manual_discount ?? 0), disc);
+
+    // Update only future unpaid rows in scope.
+    const { data: rows, error: re } = await supabase
+      .from("charges")
+      .select("id, period_month, amount, is_prorated, paid_amount, status")
+      .eq("contract_id", c.id)
+      .gte("period_month", startMonth)
+      .in("status", ["pending", "overdue"] as any);
+    if (re) throw new Error(re.message);
+
+    let updated = 0;
+    for (const r of rows ?? []) {
+      if (Number(r.paid_amount ?? 0) > 0) continue;
+      const p = computeMonthlyChargeAmount({
+        periodMonthISO: String(r.period_month),
+        startDateISO: c.start_date,
+        endDateISO: c.end_date ?? null,
+        effectiveMonthly: effective,
+      });
+      const newAmount = Math.round(p.amount * 100) / 100;
+      if (newAmount !== Number(r.amount) || Boolean(r.is_prorated) !== p.prorated) {
+        const { error: uerr } = await supabase.from("charges").update({ amount: newAmount, is_prorated: p.prorated }).eq("id", r.id);
+        if (!uerr) updated += 1;
+      }
+    }
+
+    await supabase.from("timeline_events").insert({
+      client_id: c.client_id,
+      contract_id: c.id,
+      type: "note_added",
+      payload: {
+        kind: "price_change",
+        effective_month: startMonth,
+        old_price: oldPrice,
+        new_price: data.new_monthly_price,
+        charges_updated: updated,
+      },
+      actor_id: userId,
+    });
+    return { updated, effective_month: startMonth };
+  });
+
+// ============================================================
+// Per-client ledger — monthly rows for the Payment modal.
+// ============================================================
+export const getClientLedger = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { client_id: string }) => z.object({ client_id: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    const { supabase } = context;
+    const [charges, payments, credit] = await Promise.all([
+      supabase.from("charges").select("id, period_month, amount, paid_amount, status, due_date").eq("client_id", data.client_id).neq("status", "cancelled").order("period_month"),
+      supabase.from("payments").select("id, paid_at, amount, status, note, payment_methods:payment_method_id(name), allocations:payment_allocations(charge_id, amount, charges:charge_id(period_month))").eq("client_id", data.client_id).order("paid_at", { ascending: false }),
+      supabase.from("client_credits").select("amount_remaining").eq("client_id", data.client_id).gt("amount_remaining", 0),
+    ]);
+    const creditTotal = (credit.data ?? []).reduce((s: number, r: any) => s + Number(r.amount_remaining), 0);
+    return {
+      charges: charges.data ?? [],
+      payments: payments.data ?? [],
+      credit: Math.round(creditTotal * 100) / 100,
+    };
+  });
