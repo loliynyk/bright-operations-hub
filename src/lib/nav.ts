@@ -41,8 +41,7 @@ export const NAV: NavItem[] = [
     icon: Wallet,
     emoji: "💰",
     children: [
-      { to: "/finance/invoices", label: "Нарахування" },
-      { to: "/finance/payments", label: "Оплати" },
+      { to: "/finance/settlements", label: "Розрахунки" },
       { to: "/finance/expenses", label: "Витрати" },
       { to: "/finance/cash-flow", label: "Cash Flow" },
       { to: "/finance/pnl", label: "P&L" },
