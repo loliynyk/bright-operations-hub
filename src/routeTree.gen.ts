@@ -19,6 +19,7 @@ import { Route as AuthenticatedClientsIndexRouteImport } from './routes/_authent
 import { Route as AuthenticatedLeadsIdRouteImport } from './routes/_authenticated/leads.$id'
 import { Route as AuthenticatedFinancePnlRouteImport } from './routes/_authenticated/finance.pnl'
 import { Route as AuthenticatedFinancePaymentsRouteImport } from './routes/_authenticated/finance.payments'
+import { Route as AuthenticatedFinanceInvoicesRouteImport } from './routes/_authenticated/finance.invoices'
 import { Route as AuthenticatedFinanceExpensesRouteImport } from './routes/_authenticated/finance.expenses'
 import { Route as AuthenticatedFinanceContractsRouteImport } from './routes/_authenticated/finance.contracts'
 import { Route as AuthenticatedFinanceCashFlowRouteImport } from './routes/_authenticated/finance.cash-flow'
@@ -89,6 +90,12 @@ const AuthenticatedFinancePaymentsRoute =
   AuthenticatedFinancePaymentsRouteImport.update({
     id: '/finance/payments',
     path: '/finance/payments',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedFinanceInvoicesRoute =
+  AuthenticatedFinanceInvoicesRouteImport.update({
+    id: '/finance/invoices',
+    path: '/finance/invoices',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedFinanceExpensesRoute =
@@ -232,6 +239,7 @@ export interface FileRoutesByFullPath {
   '/finance/cash-flow': typeof AuthenticatedFinanceCashFlowRoute
   '/finance/contracts': typeof AuthenticatedFinanceContractsRoute
   '/finance/expenses': typeof AuthenticatedFinanceExpensesRoute
+  '/finance/invoices': typeof AuthenticatedFinanceInvoicesRoute
   '/finance/payments': typeof AuthenticatedFinancePaymentsRoute
   '/finance/pnl': typeof AuthenticatedFinancePnlRoute
   '/leads/$id': typeof AuthenticatedLeadsIdRoute
@@ -263,6 +271,7 @@ export interface FileRoutesByTo {
   '/finance/cash-flow': typeof AuthenticatedFinanceCashFlowRoute
   '/finance/contracts': typeof AuthenticatedFinanceContractsRoute
   '/finance/expenses': typeof AuthenticatedFinanceExpensesRoute
+  '/finance/invoices': typeof AuthenticatedFinanceInvoicesRoute
   '/finance/payments': typeof AuthenticatedFinancePaymentsRoute
   '/finance/pnl': typeof AuthenticatedFinancePnlRoute
   '/leads/$id': typeof AuthenticatedLeadsIdRoute
@@ -296,6 +305,7 @@ export interface FileRoutesById {
   '/_authenticated/finance/cash-flow': typeof AuthenticatedFinanceCashFlowRoute
   '/_authenticated/finance/contracts': typeof AuthenticatedFinanceContractsRoute
   '/_authenticated/finance/expenses': typeof AuthenticatedFinanceExpensesRoute
+  '/_authenticated/finance/invoices': typeof AuthenticatedFinanceInvoicesRoute
   '/_authenticated/finance/payments': typeof AuthenticatedFinancePaymentsRoute
   '/_authenticated/finance/pnl': typeof AuthenticatedFinancePnlRoute
   '/_authenticated/leads/$id': typeof AuthenticatedLeadsIdRoute
@@ -329,6 +339,7 @@ export interface FileRouteTypes {
     | '/finance/cash-flow'
     | '/finance/contracts'
     | '/finance/expenses'
+    | '/finance/invoices'
     | '/finance/payments'
     | '/finance/pnl'
     | '/leads/$id'
@@ -360,6 +371,7 @@ export interface FileRouteTypes {
     | '/finance/cash-flow'
     | '/finance/contracts'
     | '/finance/expenses'
+    | '/finance/invoices'
     | '/finance/payments'
     | '/finance/pnl'
     | '/leads/$id'
@@ -392,6 +404,7 @@ export interface FileRouteTypes {
     | '/_authenticated/finance/cash-flow'
     | '/_authenticated/finance/contracts'
     | '/_authenticated/finance/expenses'
+    | '/_authenticated/finance/invoices'
     | '/_authenticated/finance/payments'
     | '/_authenticated/finance/pnl'
     | '/_authenticated/leads/$id'
@@ -477,6 +490,13 @@ declare module '@tanstack/react-router' {
       path: '/finance/payments'
       fullPath: '/finance/payments'
       preLoaderRoute: typeof AuthenticatedFinancePaymentsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/finance/invoices': {
+      id: '/_authenticated/finance/invoices'
+      path: '/finance/invoices'
+      fullPath: '/finance/invoices'
+      preLoaderRoute: typeof AuthenticatedFinanceInvoicesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/finance/expenses': {
@@ -643,6 +663,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFinanceCashFlowRoute: typeof AuthenticatedFinanceCashFlowRoute
   AuthenticatedFinanceContractsRoute: typeof AuthenticatedFinanceContractsRoute
   AuthenticatedFinanceExpensesRoute: typeof AuthenticatedFinanceExpensesRoute
+  AuthenticatedFinanceInvoicesRoute: typeof AuthenticatedFinanceInvoicesRoute
   AuthenticatedFinancePaymentsRoute: typeof AuthenticatedFinancePaymentsRoute
   AuthenticatedFinancePnlRoute: typeof AuthenticatedFinancePnlRoute
   AuthenticatedLeadsIdRoute: typeof AuthenticatedLeadsIdRoute
@@ -677,6 +698,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFinanceCashFlowRoute: AuthenticatedFinanceCashFlowRoute,
   AuthenticatedFinanceContractsRoute: AuthenticatedFinanceContractsRoute,
   AuthenticatedFinanceExpensesRoute: AuthenticatedFinanceExpensesRoute,
+  AuthenticatedFinanceInvoicesRoute: AuthenticatedFinanceInvoicesRoute,
   AuthenticatedFinancePaymentsRoute: AuthenticatedFinancePaymentsRoute,
   AuthenticatedFinancePnlRoute: AuthenticatedFinancePnlRoute,
   AuthenticatedLeadsIdRoute: AuthenticatedLeadsIdRoute,
