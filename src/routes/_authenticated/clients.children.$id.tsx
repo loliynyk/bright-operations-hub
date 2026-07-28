@@ -240,29 +240,39 @@ function ChildCard() {
       <div className="grid gap-4 lg:grid-cols-3">
         <SectionCard title="Основне" className="lg:col-span-2">
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Ім'я *"><Input value={current.first_name ?? ""} onChange={(e) => update({ first_name: e.target.value })} /></Field>
-            <Field label="Прізвище"><Input value={current.last_name ?? ""} onChange={(e) => update({ last_name: e.target.value })} /></Field>
+            <Field label="Ім'я *"><Input value={current.first_name ?? ""} readOnly={!form} disabled={!form} onChange={(e) => update({ first_name: e.target.value })} /></Field>
+            <Field label="Прізвище"><Input value={current.last_name ?? ""} readOnly={!form} disabled={!form} onChange={(e) => update({ last_name: e.target.value })} /></Field>
             <Field label={age ? `Дата народження (${age})` : "Дата народження"}>
-              <Input type="date" value={current.birth_date ?? ""} onChange={(e) => update({ birth_date: e.target.value })} />
+              <Input type="date" value={current.birth_date ?? ""} readOnly={!form} disabled={!form} onChange={(e) => update({ birth_date: e.target.value })} />
             </Field>
             <Field label="Група">
-              <Select value={current.group_id ?? ""} onValueChange={(v) => update({ group_id: v || null })}>
-                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>
-                  {optionsForChild.map((g: any) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              {activeGroups.length === 0 ? <EmptySelectHint to="/admin/groups" label="Створити першу групу" /> : null}
+              {form ? (
+                <>
+                  <Select value={current.group_id ?? ""} onValueChange={(v) => update({ group_id: v || null })}>
+                    <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                    <SelectContent>
+                      {optionsForChild.map((g: any) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  {activeGroups.length === 0 ? <EmptySelectHint to="/admin/groups" label="Створити першу групу" /> : null}
+                </>
+              ) : (
+                <Input value={currentGroup?.name ?? "—"} readOnly disabled />
+              )}
             </Field>
-            <Field label="Початок відвідування"><Input type="date" value={current.start_date ?? ""} onChange={(e) => update({ start_date: e.target.value })} /></Field>
-            <Field label="Завершення відвідування"><Input type="date" value={current.end_date ?? ""} onChange={(e) => update({ end_date: e.target.value })} /></Field>
+            <Field label="Початок відвідування"><Input type="date" value={current.start_date ?? ""} readOnly={!form} disabled={!form} onChange={(e) => update({ start_date: e.target.value })} /></Field>
+            <Field label="Завершення відвідування"><Input type="date" value={current.end_date ?? ""} readOnly disabled /></Field>
           </div>
           {form ? (
             <div className="mt-4 flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setForm(null)}>Скасувати</Button>
               <PrimaryButton onClick={submit} disabled={save.isPending}>Зберегти</PrimaryButton>
             </div>
-          ) : null}
+          ) : (
+            <p className="mt-4 text-xs text-muted-foreground">
+              Статус і дата завершення керуються діями «Завершити відвідування» / «Відновити відвідування» — вони синхронізують дитину, договір і нарахування.
+            </p>
+          )}
         </SectionCard>
 
         <SectionCard title="Договір">
@@ -274,15 +284,7 @@ function ChildCard() {
               <Row k="Статус">{contractStatusLabel(activeContract.status)}</Row>
               <Row k="Послуга">{activeContract.service?.name ?? "—"}</Row>
               <Row k="Тариф">{activeContract.plan?.name ?? "—"}</Row>
-              <Row k="Версія цін">{activeContract.price_version?.name ?? "—"}</Row>
-              <Row k="Абонплата">{Number(activeContract.monthly_price ?? 0).toFixed(0)} ₴/міс</Row>
               <Row k="Період">{activeContract.start_date ?? "—"} → {activeContract.end_date ?? "…"}</Row>
-              <div className="mt-3 border-t pt-2 flex justify-between">
-                <span className="text-muted-foreground">Поточний борг</span>
-                <span className={debt > 0 ? "text-destructive font-semibold" : "text-muted-foreground"}>
-                  {debt > 0 ? `${debt.toFixed(0)} ₴` : "—"}
-                </span>
-              </div>
               <div className="mt-2 flex flex-col gap-1 text-xs">
                 <Link to="/clients/$id" params={{ id: child.client_id }} search={{ tab: "contract" }} className="text-primary hover:underline">Відкрити договір →</Link>
                 <Link to="/clients/$id" params={{ id: child.client_id }} search={{ tab: "finance" }} className="text-primary hover:underline">Фінанси клієнта →</Link>
