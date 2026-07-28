@@ -795,6 +795,130 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_intake_events: {
+        Row: {
+          created_at: string
+          duplicate_lead_id: string | null
+          error_message: string | null
+          external_response_id: string
+          id: string
+          intake_form_id: string
+          lead_id: string | null
+          raw_payload: Json
+          received_at: string
+          status: string
+          submitted_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          duplicate_lead_id?: string | null
+          error_message?: string | null
+          external_response_id: string
+          id?: string
+          intake_form_id: string
+          lead_id?: string | null
+          raw_payload?: Json
+          received_at?: string
+          status: string
+          submitted_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          duplicate_lead_id?: string | null
+          error_message?: string | null
+          external_response_id?: string
+          id?: string
+          intake_form_id?: string
+          lead_id?: string | null
+          raw_payload?: Json
+          received_at?: string
+          status?: string
+          submitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_intake_events_duplicate_lead_id_fkey"
+            columns: ["duplicate_lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_intake_events_intake_form_id_fkey"
+            columns: ["intake_form_id"]
+            isOneToOne: false
+            referencedRelation: "lead_intake_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_intake_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_intake_forms: {
+        Row: {
+          branch_id: string
+          created_at: string
+          external_form_id: string
+          external_sheet_id: string | null
+          field_mapping: Json
+          id: string
+          is_active: boolean
+          requested_plan: string | null
+          secret_hash: string
+          service_id: string | null
+          source_form: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          external_form_id: string
+          external_sheet_id?: string | null
+          field_mapping?: Json
+          id?: string
+          is_active?: boolean
+          requested_plan?: string | null
+          secret_hash: string
+          service_id?: string | null
+          source_form: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          external_form_id?: string
+          external_sheet_id?: string | null
+          field_mapping?: Json
+          id?: string
+          is_active?: boolean
+          requested_plan?: string | null
+          secret_hash?: string
+          service_id?: string | null
+          source_form?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_intake_forms_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_intake_forms_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           assigned_to: string | null
