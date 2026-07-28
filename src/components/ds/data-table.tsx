@@ -115,26 +115,58 @@ export function DataTable<T extends { id: string }>({
                   </th>
                 );
               })}
+              {rowActions ? <th className="w-12 px-2 py-3" /> : null}
             </tr>
           </thead>
           <tbody className="divide-y divide-border/60">
             {isLoading ? (
               <tr>
-                <td colSpan={columns.length + 1} className="px-4 py-12 text-center text-muted-foreground">
+                <td colSpan={columns.length + 1 + (rowActions ? 1 : 0)} className="px-4 py-12 text-center text-muted-foreground">
                   Завантаження…
                 </td>
               </tr>
             ) : pageRows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length + 1} className="px-4 py-12 text-center text-muted-foreground">
+                <td colSpan={columns.length + 1 + (rowActions ? 1 : 0)} className="px-4 py-12 text-center text-muted-foreground">
                   {emptyText}
                 </td>
               </tr>
             ) : (
               pageRows.map((row, i) => {
                 const abs = start + i;
+                const clickable = !!onRowClick;
                 return (
-                  <tr key={row.id} className="transition-colors hover:bg-muted/40">
+                  <tr
+                    key={row.id}
+                    className={cn(
+                      "transition-colors hover:bg-muted/40 focus:bg-muted/60 focus:outline-none",
+                      clickable && "cursor-pointer focus-visible:ring-2 focus-visible:ring-primary/50",
+                    )}
+                    tabIndex={clickable ? 0 : -1}
+                    role={clickable ? "button" : undefined}
+                    onClick={
+                      clickable
+                        ? (e) => {
+                            // Ignore clicks that originated inside interactive descendants.
+                            const t = e.target as HTMLElement;
+                            if (t.closest('[data-stop="true"], button, a, input, select, textarea, [role="menuitem"], [role="dialog"]')) return;
+                            onRowClick!(row);
+                          }
+                        : undefined
+                    }
+                    onKeyDown={
+                      clickable
+                        ? (e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              const t = e.target as HTMLElement;
+                              if (t !== e.currentTarget) return;
+                              e.preventDefault();
+                              onRowClick!(row);
+                            }
+                          }
+                        : undefined
+                    }
+                  >
                     <td className="px-3 py-3.5 text-right tabular-nums text-muted-foreground">{abs + 1}</td>
                     {columns.map((c) => {
                       const alignCls =
@@ -145,6 +177,11 @@ export function DataTable<T extends { id: string }>({
                         </td>
                       );
                     })}
+                    {rowActions ? (
+                      <td className="px-2 py-2 text-right" data-stop="true" onClick={(e) => e.stopPropagation()}>
+                        {rowActions(row)}
+                      </td>
+                    ) : null}
                   </tr>
                 );
               })
