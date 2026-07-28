@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { ArrowLeft, CheckCircle2, Loader2, RotateCcw, AlertTriangle } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2, Pencil, RotateCcw, AlertTriangle } from "lucide-react";
 import { PageContainer, SectionCard, PrimaryButton, StatusBadge } from "@/components/ds";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import {
   getChild, saveChild, completeChildAttendance, reopenChildAttendance,
-  archiveChild, restoreChild,
 } from "@/lib/clients.functions";
 import { listLookups } from "@/lib/lookups.functions";
 import { childStatusLabel, contractStatusLabel } from "@/lib/child-validation";
@@ -45,8 +44,6 @@ function ChildCard() {
   const saveFn = useServerFn(saveChild);
   const completeFn = useServerFn(completeChildAttendance);
   const reopenFn = useServerFn(reopenChildAttendance);
-  const archiveFn = useServerFn(archiveChild);
-  const restoreFn = useServerFn(restoreChild);
   const lookupsFn = useServerFn(listLookups);
 
   const { data, isLoading } = useQuery({ queryKey: ["child", id], queryFn: () => getFn({ data: { id } }) });
@@ -59,8 +56,6 @@ function ChildCard() {
   const [note, setNote] = useState("");
   const [reopenOpen, setReopenOpen] = useState(false);
   const [reopenNote, setReopenNote] = useState("");
-  const [archiveOpen, setArchiveOpen] = useState(false);
-  const [archiveReason, setArchiveReason] = useState("");
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["child", id] });
@@ -91,28 +86,12 @@ function ChildCard() {
     },
     onError: (e: any) => toast.error("Помилка", { description: e.message }),
   });
-  const archiveMut = useMutation({
-    mutationFn: () => archiveFn({ data: { id, reason: archiveReason.trim() || null } }),
-    onSuccess: () => { toast.success("Переміщено в архів"); setArchiveOpen(false); setArchiveReason(""); invalidate(); },
-    onError: (e: any) => toast.error("Помилка", { description: e.message }),
-  });
-  const restoreMut = useMutation({
-    mutationFn: () => restoreFn({ data: { id } }),
-    onSuccess: () => { toast.success("Відновлено"); invalidate(); },
-    onError: (e: any) => toast.error("Помилка", { description: e.message }),
-  });
 
   const current = useMemo(() => (form ?? data?.child) as any, [form, data]);
   const activeContract = useMemo(() => {
     if (!data) return null;
     const arr = data.contracts as any[];
     return arr.find((c) => c.status !== "cancelled" && c.status !== "completed" && c.status !== "draft") ?? arr[0] ?? null;
-  }, [data]);
-  const debt = useMemo(() => {
-    if (!data) return 0;
-    return (data.charges as any[])
-      .filter((c) => c.status !== "cancelled")
-      .reduce((s, c) => s + Math.max(0, Number(c.amount) - Number(c.paid_amount ?? 0)), 0);
   }, [data]);
 
   if (isLoading || !data) return <PageContainer><p className="text-muted-foreground">Завантаження...</p></PageContainer>;
@@ -244,27 +223,10 @@ function ChildCard() {
               </AlertDialogContent>
             </AlertDialog>
           )}
-          {isArchived ? (
-            <Button variant="ghost" onClick={() => restoreMut.mutate()} disabled={restoreMut.isPending}>Швидке відновлення</Button>
-          ) : !isGraduated ? (
-            <AlertDialog open={archiveOpen} onOpenChange={(o) => { setArchiveOpen(o); if (!o) setArchiveReason(""); }}>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost">В архів</Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>В архів?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Використовується для помилкових/тестових записів. Дитина зникне з активних списків, історія збережеться.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <Textarea rows={2} value={archiveReason} onChange={(e) => setArchiveReason(e.target.value)} placeholder="Причина (необов'язково)" />
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Скасувати</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => archiveMut.mutate()}>Перемістити в архів</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+          {!form ? (
+            <Button variant="outline" onClick={() => setForm({ ...child })}>
+              <Pencil className="mr-2 h-4 w-4" />Редагувати
+            </Button>
           ) : null}
         </div>
       </div>
@@ -272,29 +234,39 @@ function ChildCard() {
       <div className="grid gap-4 lg:grid-cols-3">
         <SectionCard title="Основне" className="lg:col-span-2">
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Ім'я *"><Input value={current.first_name ?? ""} onChange={(e) => update({ first_name: e.target.value })} /></Field>
-            <Field label="Прізвище"><Input value={current.last_name ?? ""} onChange={(e) => update({ last_name: e.target.value })} /></Field>
+            <Field label="Ім'я *"><Input value={current.first_name ?? ""} readOnly={!form} disabled={!form} onChange={(e) => update({ first_name: e.target.value })} /></Field>
+            <Field label="Прізвище"><Input value={current.last_name ?? ""} readOnly={!form} disabled={!form} onChange={(e) => update({ last_name: e.target.value })} /></Field>
             <Field label={age ? `Дата народження (${age})` : "Дата народження"}>
-              <Input type="date" value={current.birth_date ?? ""} onChange={(e) => update({ birth_date: e.target.value })} />
+              <Input type="date" value={current.birth_date ?? ""} readOnly={!form} disabled={!form} onChange={(e) => update({ birth_date: e.target.value })} />
             </Field>
             <Field label="Група">
-              <Select value={current.group_id ?? ""} onValueChange={(v) => update({ group_id: v || null })}>
-                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>
-                  {optionsForChild.map((g: any) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              {activeGroups.length === 0 ? <EmptySelectHint to="/admin/groups" label="Створити першу групу" /> : null}
+              {form ? (
+                <>
+                  <Select value={current.group_id ?? ""} onValueChange={(v) => update({ group_id: v || null })}>
+                    <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                    <SelectContent>
+                      {optionsForChild.map((g: any) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  {activeGroups.length === 0 ? <EmptySelectHint to="/admin/groups" label="Створити першу групу" /> : null}
+                </>
+              ) : (
+                <Input value={currentGroup?.name ?? "—"} readOnly disabled />
+              )}
             </Field>
-            <Field label="Початок відвідування"><Input type="date" value={current.start_date ?? ""} onChange={(e) => update({ start_date: e.target.value })} /></Field>
-            <Field label="Завершення відвідування"><Input type="date" value={current.end_date ?? ""} onChange={(e) => update({ end_date: e.target.value })} /></Field>
+            <Field label="Початок відвідування"><Input type="date" value={current.start_date ?? ""} readOnly={!form} disabled={!form} onChange={(e) => update({ start_date: e.target.value })} /></Field>
+            <Field label="Завершення відвідування"><Input type="date" value={current.end_date ?? ""} readOnly disabled /></Field>
           </div>
           {form ? (
             <div className="mt-4 flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setForm(null)}>Скасувати</Button>
               <PrimaryButton onClick={submit} disabled={save.isPending}>Зберегти</PrimaryButton>
             </div>
-          ) : null}
+          ) : (
+            <p className="mt-4 text-xs text-muted-foreground">
+              Статус і дата завершення керуються діями «Завершити відвідування» / «Відновити відвідування» — вони синхронізують дитину, договір і нарахування.
+            </p>
+          )}
         </SectionCard>
 
         <SectionCard title="Договір">
@@ -306,15 +278,7 @@ function ChildCard() {
               <Row k="Статус">{contractStatusLabel(activeContract.status)}</Row>
               <Row k="Послуга">{activeContract.service?.name ?? "—"}</Row>
               <Row k="Тариф">{activeContract.plan?.name ?? "—"}</Row>
-              <Row k="Версія цін">{activeContract.price_version?.name ?? "—"}</Row>
-              <Row k="Абонплата">{Number(activeContract.monthly_price ?? 0).toFixed(0)} ₴/міс</Row>
               <Row k="Період">{activeContract.start_date ?? "—"} → {activeContract.end_date ?? "…"}</Row>
-              <div className="mt-3 border-t pt-2 flex justify-between">
-                <span className="text-muted-foreground">Поточний борг</span>
-                <span className={debt > 0 ? "text-destructive font-semibold" : "text-muted-foreground"}>
-                  {debt > 0 ? `${debt.toFixed(0)} ₴` : "—"}
-                </span>
-              </div>
               <div className="mt-2 flex flex-col gap-1 text-xs">
                 <Link to="/clients/$id" params={{ id: child.client_id }} search={{ tab: "contract" }} className="text-primary hover:underline">Відкрити договір →</Link>
                 <Link to="/clients/$id" params={{ id: child.client_id }} search={{ tab: "finance" }} className="text-primary hover:underline">Фінанси клієнта →</Link>
