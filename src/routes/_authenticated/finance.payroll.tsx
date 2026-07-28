@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Plus, Play, Wallet } from "lucide-react";
-import { PageContainer, PageHeader, SectionCard, PrimaryButton, StatusBadge } from "@/components/ds";
+import { PageContainer, PageHeader, SectionCard, PrimaryButton, StatusBadge, MetricCard } from "@/components/ds";
 import { KpiGrid } from "@/components/ds/kpi-grid";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
