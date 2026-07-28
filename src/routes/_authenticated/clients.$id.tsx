@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { ArrowLeft, FileText, Loader2, Download, CheckCircle2, Circle, AlertCircle, RefreshCw, ArrowRight } from "lucide-react";
 import { PageContainer, SectionCard, PrimaryButton, SecondaryButton } from "@/components/ds";
+import { OriginBadge } from "@/components/ds/related-records";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,11 +69,14 @@ function ClientDetail() {
     <PageContainer>
       <div className="mb-6 flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate({ to: "/clients" })}><ArrowLeft className="h-4 w-4" /></Button>
-        <div>
+        <div className="flex-1">
           <p className="text-xs uppercase tracking-wide text-muted-foreground">Клієнт</p>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {client.parent_first_name} {client.parent_last_name}
-          </h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {client.parent_first_name} {client.parent_last_name}
+            </h1>
+            <OriginBadge leadId={client.lead_id} />
+          </div>
         </div>
       </div>
 
