@@ -3,9 +3,8 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Plus, UserPlus, CheckCircle2, TrendingUp, XCircle, CalendarCheck, ExternalLink, Archive } from "lucide-react";
-import { PageContainer, PageHeader, SectionCard, MetricCard, PrimaryButton, SearchInput } from "@/components/ds";
-import { KpiGrid } from "@/components/ds/kpi-grid";
+import { Plus, ExternalLink, Archive } from "lucide-react";
+import { PageContainer, PageHeader, SectionCard, PrimaryButton, SearchInput } from "@/components/ds";
 import { FilterBar } from "@/components/ds/list-toolbar";
 import { InlineStatusSelect } from "@/components/ds/inline-status-select";
 import { RowActionsMenu } from "@/components/ds/row-actions-menu";
@@ -58,18 +57,8 @@ function LeadsIndex() {
     return hay.includes(q.toLowerCase());
   });
 
-  const kpis = useMemo(() => {
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-    const list = leads as any[];
-    return {
-      open: list.filter((l) => OPEN_STATUSES.has(l.status)).length,
-      newMonth: list.filter((l) => (l.registration_date ?? l.created_at ?? "").slice(0, 10) >= monthStart).length,
-      trial: list.filter((l) => l.status === "trial" || l.status === "tour_scheduled").length,
-      converted: list.filter((l) => l.status === "converted" || l.converted_client_id).length,
-      lost: list.filter((l) => l.status === "lost").length,
-    };
-  }, [leads]);
+
+
 
   const statusMutation = useMutation({
     mutationFn: (v: { id: string; status: string }) => updateStatusFn({ data: v }),
@@ -133,13 +122,8 @@ function LeadsIndex() {
         }
       />
 
-      <KpiGrid className="xl:grid-cols-5">
-        <MetricCard label="Відкриті" value={String(kpis.open)} icon={UserPlus} tone="primary" />
-        <MetricCard label="Нові (міс.)" value={String(kpis.newMonth)} icon={TrendingUp} tone="info" />
-        <MetricCard label="Пробні / візити" value={String(kpis.trial)} icon={CalendarCheck} tone="warning" />
-        <MetricCard label="Конвертовані" value={String(kpis.converted)} icon={CheckCircle2} tone="success" />
-        <MetricCard label="Втрачені" value={String(kpis.lost)} icon={XCircle} tone="danger" />
-      </KpiGrid>
+
+
 
       <SectionCard>
         <LeadsFunnel leads={leads as any[]} activeStatuses={statusFilter} onSelectStage={(s) => setStatusFilter(s)} />
