@@ -224,6 +224,30 @@ function ChildrenPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {archiving ? (
+        <ConfirmDeleteDialog
+          open={!!archiving}
+          onOpenChange={(o) => !o && setArchiving(null)}
+          entityName={`${archiving.first_name} ${archiving.last_name ?? ""}`.trim()}
+          variant="archive"
+          impact="Дитина буде прихована зі списку. Історія збережеться. Для завершення відвідування використовуйте картку дитини."
+          actionLabel="Архівувати"
+          isPending={archiveMutation.isPending}
+          onConfirm={() => archiveMutation.mutateAsync(archiving)}
+        />
+      ) : null}
+      {restoring ? (
+        <ConfirmDeleteDialog
+          open={!!restoring}
+          onOpenChange={(o) => !o && setRestoring(null)}
+          entityName={`${restoring.first_name} ${restoring.last_name ?? ""}`.trim()}
+          variant="restore"
+          actionLabel="Відновити"
+          isPending={restoreMutation.isPending}
+          onConfirm={() => restoreMutation.mutateAsync(restoring)}
+        />
+      ) : null}
     </PageContainer>
   );
 }
