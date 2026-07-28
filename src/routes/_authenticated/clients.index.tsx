@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Users, UserCheck, PauseCircle, Archive, ExternalLink, ArchiveRestore } from "lucide-react";
 import { PageContainer, PageHeader, SectionCard, SearchInput, MetricCard } from "@/components/ds";
+import { OriginBadge } from "@/components/ds/related-records";
 import { KpiGrid } from "@/components/ds/kpi-grid";
 import { FilterBar } from "@/components/ds/list-toolbar";
 import { InlineStatusSelect } from "@/components/ds/inline-status-select";
@@ -84,7 +85,23 @@ function ClientsIndex() {
       render: (r) => <span className="font-medium text-foreground">{r.parent_first_name} {r.parent_last_name}</span>,
     },
     { key: "phone", header: "Телефон", render: (r) => <span className="text-muted-foreground">{r.phone ?? "—"}</span> },
-    { key: "email", header: "Email", render: (r) => <span className="text-muted-foreground">{r.email ?? "—"}</span> },
+    {
+      key: "children",
+      header: "Діти",
+      sortAccessor: (r) => r.active_child_count ?? 0,
+      render: (r) => (
+        <span className="text-muted-foreground">
+          {r.active_child_count ?? 0}
+          {r.child_count && r.child_count !== r.active_child_count ? ` / ${r.child_count}` : ""}
+        </span>
+      ),
+    },
+    {
+      key: "origin",
+      header: "Джерело",
+      sortAccessor: (r) => (r.lead_id ? "1" : "0"),
+      render: (r) => <OriginBadge leadId={r.lead_id} />,
+    },
     {
       key: "status",
       header: "Статус",
