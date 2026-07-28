@@ -251,7 +251,7 @@ function PayrollWorkspace() {
           {adjFor ? (
             <AdjustmentForm
               initial={adjFor}
-              onSubmit={(v) => updAdj.mutate({ id: adjFor.id, ...v })}
+              onSubmit={(v: any) => updAdj.mutate({ id: adjFor.id, ...v })}
               pending={updAdj.isPending}
             />
           ) : null}
