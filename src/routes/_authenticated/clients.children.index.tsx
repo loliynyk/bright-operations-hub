@@ -113,9 +113,9 @@ function ChildrenPage() {
       header: "Дитина",
       sortAccessor: (r) => `${r.last_name ?? ""} ${r.first_name}`.toLowerCase(),
       render: (r) => (
-        <Link to="/clients/children/$id" params={{ id: r.id }} className="font-medium text-primary hover:underline">
+        <span className="font-medium text-foreground">
           {r.first_name} {r.last_name ?? ""}
-        </Link>
+        </span>
       ),
     },
     {
