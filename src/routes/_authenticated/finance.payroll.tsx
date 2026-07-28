@@ -147,14 +147,12 @@ function PayrollWorkspace() {
         }
       />
 
-      <KpiGrid
-        items={[
-          { label: "Працівників", value: String(totals.count), tone: "neutral" },
-          { label: "До сплати", value: fmt(totals.to_pay), tone: "primary" },
-          { label: "Виплачено", value: fmt(totals.paid), tone: "success" },
-          { label: "Залишок", value: fmt(totals.outstanding), tone: totals.outstanding > 0 ? "warning" : "neutral" },
-        ]}
-      />
+      <KpiGrid>
+        <MetricCard label="Працівників" value={String(totals.count)} tone="neutral" />
+        <MetricCard label="До сплати" value={fmt(totals.to_pay)} tone="primary" />
+        <MetricCard label="Виплачено" value={fmt(totals.paid)} tone="success" />
+        <MetricCard label="Залишок" value={fmt(totals.outstanding)} tone={totals.outstanding > 0 ? "warning" : "neutral"} />
+      </KpiGrid>
 
       <div className="mt-4 mb-3 flex flex-wrap items-center gap-2">
         <Select value={status} onValueChange={setStatus}>
