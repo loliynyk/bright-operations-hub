@@ -1,13 +1,18 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Users } from "lucide-react";
-import { PageContainer, PageHeader, SectionCard, StatusBadge, EmptyState, SearchInput } from "@/components/ds";
+import { toast } from "sonner";
+import { Users, Baby, CalendarPlus, CalendarX, Archive, ArchiveRestore, ExternalLink } from "lucide-react";
+import { PageContainer, PageHeader, SectionCard, StatusBadge, EmptyState, SearchInput, MetricCard } from "@/components/ds";
 import { DataTable, formatDate, type DataTableColumn } from "@/components/ds/data-table";
+import { KpiGrid } from "@/components/ds/kpi-grid";
+import { RowActionsMenu } from "@/components/ds/row-actions-menu";
+import { ConfirmDeleteDialog } from "@/components/ds/confirm-delete-dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useBranch } from "@/lib/branch-context";
 import { listChildrenByGroup } from "@/lib/finance.functions";
+import { archiveChild, restoreChild } from "@/lib/clients.functions";
 import { childStatusLabel, contractStatusLabel } from "@/lib/child-validation";
 
 export const Route = createFileRoute("/_authenticated/clients/children/")({
@@ -33,11 +38,17 @@ function ageFromBirth(iso?: string | null): string {
 
 function ChildrenPage() {
   const { branch } = useBranch();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
   const fn = useServerFn(listChildrenByGroup);
+  const archiveFn = useServerFn(archiveChild);
+  const restoreFn = useServerFn(restoreChild);
   const [search, setSearch] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [stateFilter, setStateFilter] = useState<StateFilter>("all");
   const [view, setView] = useState<"groups" | "list">("list");
+  const [archiving, setArchiving] = useState<any | null>(null);
+  const [restoring, setRestoring] = useState<any | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ["children-by-group", branch.id, showArchived],
     queryFn: () => fn({ data: { branch_id: branch.id, show_archived: showArchived } }),
@@ -69,6 +80,27 @@ function ChildrenPage() {
     return [...grouped, ...nogroup];
   }, [filtered]);
 
+  const kpis = useMemo(() => {
+    const rows = allRows;
+    return {
+      total: rows.length,
+      active: rows.filter((r) => r.state === "active" || r.state === "leaving").length,
+      upcoming: rows.filter((r) => r.state === "upcoming").length,
+      leaving: rows.filter((r) => r.state === "leaving").length,
+    };
+  }, [allRows]);
+
+  const archiveMutation = useMutation({
+    mutationFn: (row: any) => archiveFn({ data: { id: row.id } }),
+    onSuccess: () => { toast.success("Дитину переведено в архів"); qc.invalidateQueries({ queryKey: ["children-by-group"] }); setArchiving(null); },
+    onError: (e: any) => toast.error("Помилка", { description: e.message }),
+  });
+  const restoreMutation = useMutation({
+    mutationFn: (row: any) => restoreFn({ data: { id: row.id } }),
+    onSuccess: () => { toast.success("Дитину відновлено"); qc.invalidateQueries({ queryKey: ["children-by-group"] }); setRestoring(null); },
+    onError: (e: any) => toast.error("Помилка", { description: e.message }),
+  });
+
   const listColumns: DataTableColumn<any>[] = [
     {
       key: "start_date",
@@ -81,9 +113,9 @@ function ChildrenPage() {
       header: "Дитина",
       sortAccessor: (r) => `${r.last_name ?? ""} ${r.first_name}`.toLowerCase(),
       render: (r) => (
-        <Link to="/clients/children/$id" params={{ id: r.id }} className="font-medium text-primary hover:underline">
+        <span className="font-medium text-foreground">
           {r.first_name} {r.last_name ?? ""}
-        </Link>
+        </span>
       ),
     },
     {
@@ -138,6 +170,13 @@ function ChildrenPage() {
         }
       />
 
+      <KpiGrid className="xl:grid-cols-4">
+        <MetricCard label="Усього" value={String(kpis.total)} icon={Baby} tone="primary" />
+        <MetricCard label="Активні" value={String(kpis.active)} icon={Users} tone="success" />
+        <MetricCard label="Заплановані" value={String(kpis.upcoming)} icon={CalendarPlus} tone="info" />
+        <MetricCard label="Завершуються" value={String(kpis.leaving)} icon={CalendarX} tone="warning" />
+      </KpiGrid>
+
       <Tabs value={view} onValueChange={(v) => setView(v as "groups" | "list")}>
         <TabsList>
           <TabsTrigger value="list">Список</TabsTrigger>
@@ -152,6 +191,18 @@ function ChildrenPage() {
               isLoading={isLoading || !filtered}
               defaultSort={{ key: "start_date", dir: "desc" }}
               emptyText="Дітей не знайдено за поточними фільтрами."
+              onRowClick={(r) => navigate({ to: "/clients/children/$id", params: { id: r.id } })}
+              rowActions={(r) => (
+                <RowActionsMenu
+                  actions={[
+                    { label: "Відкрити картку", icon: <ExternalLink className="h-3.5 w-3.5" />, onSelect: () => navigate({ to: "/clients/children/$id", params: { id: r.id } }) },
+                    { label: "Відкрити батьків", onSelect: () => navigate({ to: "/clients/$id", params: { id: r.client_id } }) },
+                    r.status !== "archived"
+                      ? { label: "Перевести в архів", icon: <Archive className="h-3.5 w-3.5" />, destructive: true, separatorBefore: true, onSelect: () => setArchiving(r) }
+                      : { label: "Відновити", icon: <ArchiveRestore className="h-3.5 w-3.5" />, separatorBefore: true, onSelect: () => setRestoring(r) },
+                  ]}
+                />
+              )}
             />
           </SectionCard>
         </TabsContent>
@@ -173,6 +224,30 @@ function ChildrenPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {archiving ? (
+        <ConfirmDeleteDialog
+          open={!!archiving}
+          onOpenChange={(o) => !o && setArchiving(null)}
+          entityName={`${archiving.first_name} ${archiving.last_name ?? ""}`.trim()}
+          variant="archive"
+          impact="Дитина буде прихована зі списку. Історія збережеться. Для завершення відвідування використовуйте картку дитини."
+          actionLabel="Архівувати"
+          isPending={archiveMutation.isPending}
+          onConfirm={() => archiveMutation.mutateAsync(archiving)}
+        />
+      ) : null}
+      {restoring ? (
+        <ConfirmDeleteDialog
+          open={!!restoring}
+          onOpenChange={(o) => !o && setRestoring(null)}
+          entityName={`${restoring.first_name} ${restoring.last_name ?? ""}`.trim()}
+          variant="restore"
+          actionLabel="Відновити"
+          isPending={restoreMutation.isPending}
+          onConfirm={() => restoreMutation.mutateAsync(restoring)}
+        />
+      ) : null}
     </PageContainer>
   );
 }
