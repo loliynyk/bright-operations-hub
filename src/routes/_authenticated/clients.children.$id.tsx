@@ -44,8 +44,6 @@ function ChildCard() {
   const saveFn = useServerFn(saveChild);
   const completeFn = useServerFn(completeChildAttendance);
   const reopenFn = useServerFn(reopenChildAttendance);
-  const archiveFn = useServerFn(archiveChild);
-  const restoreFn = useServerFn(restoreChild);
   const lookupsFn = useServerFn(listLookups);
 
   const { data, isLoading } = useQuery({ queryKey: ["child", id], queryFn: () => getFn({ data: { id } }) });
@@ -58,8 +56,6 @@ function ChildCard() {
   const [note, setNote] = useState("");
   const [reopenOpen, setReopenOpen] = useState(false);
   const [reopenNote, setReopenNote] = useState("");
-  const [archiveOpen, setArchiveOpen] = useState(false);
-  const [archiveReason, setArchiveReason] = useState("");
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["child", id] });
