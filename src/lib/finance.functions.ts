@@ -672,6 +672,7 @@ export const listInvoices = createServerFn({ method: "GET" })
           child_name: r.contracts?.children
             ? `${r.contracts.children.first_name ?? ""} ${r.contracts.children.last_name ?? ""}`.trim()
             : "",
+          group_id: r.contracts?.children?.group_id ?? null,
           group_name: r.contracts?.children?.groups?.name ?? null,
           amount: actual,
           paid_amount: Number(r.paid_amount ?? 0),
