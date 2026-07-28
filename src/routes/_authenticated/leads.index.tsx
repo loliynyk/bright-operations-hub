@@ -32,11 +32,11 @@ function LeadsIndex() {
   });
   const { data: lookups } = useQuery({ queryKey: ["lookups"], queryFn: () => lookupsFn() });
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string[]>([]); // [] = all
   const [open, setOpen] = useState(false);
 
   const filtered = (leads as any[]).filter((l) => {
-    if (status !== "all" && l.status !== status) return false;
+    if (statusFilter.length && !statusFilter.includes(l.status)) return false;
     if (!q) return true;
     const hay = `${l.parent_name ?? ""} ${l.parent_phone ?? ""} ${l.child_name ?? ""}`.toLowerCase();
     return hay.includes(q.toLowerCase());
