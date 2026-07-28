@@ -1,13 +1,18 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Users } from "lucide-react";
-import { PageContainer, PageHeader, SectionCard, StatusBadge, EmptyState, SearchInput } from "@/components/ds";
+import { toast } from "sonner";
+import { Users, Baby, CalendarPlus, CalendarX, Archive, ArchiveRestore, ExternalLink } from "lucide-react";
+import { PageContainer, PageHeader, SectionCard, StatusBadge, EmptyState, SearchInput, MetricCard } from "@/components/ds";
 import { DataTable, formatDate, type DataTableColumn } from "@/components/ds/data-table";
+import { KpiGrid } from "@/components/ds/kpi-grid";
+import { RowActionsMenu } from "@/components/ds/row-actions-menu";
+import { ConfirmDeleteDialog } from "@/components/ds/confirm-delete-dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useBranch } from "@/lib/branch-context";
 import { listChildrenByGroup } from "@/lib/finance.functions";
+import { archiveChild, restoreChild } from "@/lib/clients.functions";
 import { childStatusLabel, contractStatusLabel } from "@/lib/child-validation";
 
 export const Route = createFileRoute("/_authenticated/clients/children/")({
