@@ -15,7 +15,7 @@ export const listClients = createServerFn({ method: "GET" })
   .handler(async ({ context, data }) => {
     let q = context.supabase
       .from("clients")
-      .select("id, parent_first_name, parent_last_name, phone, email, status, branch_id, created_at")
+      .select("id, parent_first_name, parent_last_name, phone, email, status, branch_id, lead_id, created_at")
       .order("created_at", { ascending: false })
       .limit(1000);
     if (data.branch_id) q = q.eq("branch_id", data.branch_id);
@@ -25,16 +25,26 @@ export const listClients = createServerFn({ method: "GET" })
     if (ids.length === 0) return [];
     const { data: kids } = await context.supabase
       .from("children")
-      .select("client_id, start_date")
+      .select("client_id, start_date, status")
       .in("client_id", ids);
     const startByClient = new Map<string, string>();
+    const activeByClient = new Map<string, number>();
+    const totalByClient = new Map<string, number>();
     for (const k of kids ?? []) {
+      const cid = k.client_id as string;
+      totalByClient.set(cid, (totalByClient.get(cid) ?? 0) + 1);
+      if (k.status !== "archived") activeByClient.set(cid, (activeByClient.get(cid) ?? 0) + 1);
       if (!k.start_date) continue;
-      const cur = startByClient.get(k.client_id as string);
+      const cur = startByClient.get(cid);
       const s = String(k.start_date);
-      if (!cur || s < cur) startByClient.set(k.client_id as string, s);
+      if (!cur || s < cur) startByClient.set(cid, s);
     }
-    return (clients ?? []).map((c: any) => ({ ...c, start_date: startByClient.get(c.id) ?? null }));
+    return (clients ?? []).map((c: any) => ({
+      ...c,
+      start_date: startByClient.get(c.id) ?? null,
+      child_count: totalByClient.get(c.id) ?? 0,
+      active_child_count: activeByClient.get(c.id) ?? 0,
+    }));
   });
 
 export const getClient = createServerFn({ method: "GET" })
