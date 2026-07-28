@@ -38,11 +38,17 @@ function ageFromBirth(iso?: string | null): string {
 
 function ChildrenPage() {
   const { branch } = useBranch();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
   const fn = useServerFn(listChildrenByGroup);
+  const archiveFn = useServerFn(archiveChild);
+  const restoreFn = useServerFn(restoreChild);
   const [search, setSearch] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [stateFilter, setStateFilter] = useState<StateFilter>("all");
   const [view, setView] = useState<"groups" | "list">("list");
+  const [archiving, setArchiving] = useState<any | null>(null);
+  const [restoring, setRestoring] = useState<any | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ["children-by-group", branch.id, showArchived],
     queryFn: () => fn({ data: { branch_id: branch.id, show_archived: showArchived } }),
@@ -73,6 +79,27 @@ function ChildrenPage() {
     const nogroup = filtered.no_group.map((c: any) => ({ ...c, _group_name: null }));
     return [...grouped, ...nogroup];
   }, [filtered]);
+
+  const kpis = useMemo(() => {
+    const rows = allRows;
+    return {
+      total: rows.length,
+      active: rows.filter((r) => r.state === "active" || r.state === "leaving").length,
+      upcoming: rows.filter((r) => r.state === "upcoming").length,
+      leaving: rows.filter((r) => r.state === "leaving").length,
+    };
+  }, [allRows]);
+
+  const archiveMutation = useMutation({
+    mutationFn: (row: any) => archiveFn({ data: { id: row.id } }),
+    onSuccess: () => { toast.success("Дитину переведено в архів"); qc.invalidateQueries({ queryKey: ["children-by-group"] }); setArchiving(null); },
+    onError: (e: any) => toast.error("Помилка", { description: e.message }),
+  });
+  const restoreMutation = useMutation({
+    mutationFn: (row: any) => restoreFn({ data: { id: row.id } }),
+    onSuccess: () => { toast.success("Дитину відновлено"); qc.invalidateQueries({ queryKey: ["children-by-group"] }); setRestoring(null); },
+    onError: (e: any) => toast.error("Помилка", { description: e.message }),
+  });
 
   const listColumns: DataTableColumn<any>[] = [
     {
