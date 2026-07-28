@@ -15,6 +15,7 @@ import { listLeads, saveLead } from "@/lib/leads.functions";
 import { listLookups } from "@/lib/lookups.functions";
 import { statusLabel, statusTone, sourceLabel, LEAD_STATUSES, LEAD_SOURCES } from "@/lib/leads";
 import { useBranch } from "@/lib/branch-context";
+import { LeadsFunnel } from "@/components/leads/leads-funnel";
 
 export const Route = createFileRoute("/_authenticated/leads/")({
   component: LeadsIndex,
@@ -31,11 +32,11 @@ function LeadsIndex() {
   });
   const { data: lookups } = useQuery({ queryKey: ["lookups"], queryFn: () => lookupsFn() });
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string[]>([]); // [] = all
   const [open, setOpen] = useState(false);
 
   const filtered = (leads as any[]).filter((l) => {
-    if (status !== "all" && l.status !== status) return false;
+    if (statusFilter.length && !statusFilter.includes(l.status)) return false;
     if (!q) return true;
     const hay = `${l.parent_name ?? ""} ${l.parent_phone ?? ""} ${l.child_name ?? ""}`.toLowerCase();
     return hay.includes(q.toLowerCase());
@@ -93,11 +94,25 @@ function LeadsIndex() {
       />
 
       <SectionCard>
+        <LeadsFunnel
+          leads={leads as any[]}
+          activeStatuses={statusFilter}
+          onSelectStage={(statuses) => setStatusFilter(statuses)}
+        />
         <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center">
           <SearchInput value={q} onChange={(e) => setQ(e.target.value)} className="md:max-w-sm" />
-          <Select value={status} onValueChange={setStatus}>
+          <Select
+            value={statusFilter.length === 1 ? statusFilter[0] : statusFilter.length === 0 ? "all" : "__multi__"}
+            onValueChange={(v) => setStatusFilter(v === "all" ? [] : [v])}
+          >
             <SelectTrigger className="h-9 md:w-56">
-              <SelectValue />
+              <SelectValue>
+                {statusFilter.length === 0
+                  ? "Усі статуси"
+                  : statusFilter.length === 1
+                    ? statusLabel(statusFilter[0])
+                    : `Фільтр воронки (${statusFilter.length})`}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Усі статуси</SelectItem>
