@@ -86,16 +86,6 @@ function ChildCard() {
     },
     onError: (e: any) => toast.error("Помилка", { description: e.message }),
   });
-  const archiveMut = useMutation({
-    mutationFn: () => archiveFn({ data: { id, reason: archiveReason.trim() || null } }),
-    onSuccess: () => { toast.success("Переміщено в архів"); setArchiveOpen(false); setArchiveReason(""); invalidate(); },
-    onError: (e: any) => toast.error("Помилка", { description: e.message }),
-  });
-  const restoreMut = useMutation({
-    mutationFn: () => restoreFn({ data: { id } }),
-    onSuccess: () => { toast.success("Відновлено"); invalidate(); },
-    onError: (e: any) => toast.error("Помилка", { description: e.message }),
-  });
 
   const current = useMemo(() => (form ?? data?.child) as any, [form, data]);
   const activeContract = useMemo(() => {
