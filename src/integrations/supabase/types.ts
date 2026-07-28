@@ -591,40 +591,214 @@ export type Database = {
           },
         ]
       }
-      employees: {
+      employee_payrolls: {
         Row: {
+          amount_outstanding: number
+          amount_paid: number
+          amount_to_pay: number
+          base_salary_snapshot: number
+          bonus_amount: number
+          bonus_description: string | null
           branch_id: string | null
           created_at: string
+          currency: string
+          deduction_amount: number
+          deduction_description: string | null
+          employee_id: string
+          id: string
+          notes: string | null
+          period_month: string
+          status: Database["public"]["Enums"]["payroll_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount_outstanding?: number
+          amount_paid?: number
+          amount_to_pay?: number
+          base_salary_snapshot?: number
+          bonus_amount?: number
+          bonus_description?: string | null
+          branch_id?: string | null
+          created_at?: string
+          currency?: string
+          deduction_amount?: number
+          deduction_description?: string | null
+          employee_id: string
+          id?: string
+          notes?: string | null
+          period_month: string
+          status?: Database["public"]["Enums"]["payroll_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount_outstanding?: number
+          amount_paid?: number
+          amount_to_pay?: number
+          base_salary_snapshot?: number
+          bonus_amount?: number
+          bonus_description?: string | null
+          branch_id?: string | null
+          created_at?: string
+          currency?: string
+          deduction_amount?: number
+          deduction_description?: string | null
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          period_month?: string
+          status?: Database["public"]["Enums"]["payroll_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_payrolls_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_payrolls_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_salaries: {
+        Row: {
+          base_salary: number
+          created_at: string
+          created_by: string | null
+          currency: string
+          effective_from: string
+          effective_to: string | null
+          employee_id: string
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          base_salary: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          effective_from: string
+          effective_to?: string | null
+          employee_id: string
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          base_salary?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          effective_from?: string
+          effective_to?: string | null
+          employee_id?: string
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_salaries_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employees: {
+        Row: {
+          address: string | null
+          archived_at: string | null
+          bank_name: string | null
+          birth_date: string | null
+          branch_id: string | null
+          card_number: string | null
+          created_at: string
           email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          emergency_contact_relationship: string | null
+          employee_number: string | null
+          employment_type: Database["public"]["Enums"]["employment_type"] | null
+          first_name: string | null
           full_name: string
+          group_id: string | null
+          hire_date: string | null
           id: string
           is_active: boolean
+          last_name: string | null
+          notes: string | null
           phone: string | null
           position: string | null
+          status: Database["public"]["Enums"]["employee_status"]
+          termination_date: string | null
           updated_at: string
           user_id: string | null
         }
         Insert: {
+          address?: string | null
+          archived_at?: string | null
+          bank_name?: string | null
+          birth_date?: string | null
           branch_id?: string | null
+          card_number?: string | null
           created_at?: string
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relationship?: string | null
+          employee_number?: string | null
+          employment_type?:
+            | Database["public"]["Enums"]["employment_type"]
+            | null
+          first_name?: string | null
           full_name: string
+          group_id?: string | null
+          hire_date?: string | null
           id?: string
           is_active?: boolean
+          last_name?: string | null
+          notes?: string | null
           phone?: string | null
           position?: string | null
+          status?: Database["public"]["Enums"]["employee_status"]
+          termination_date?: string | null
           updated_at?: string
           user_id?: string | null
         }
         Update: {
+          address?: string | null
+          archived_at?: string | null
+          bank_name?: string | null
+          birth_date?: string | null
           branch_id?: string | null
+          card_number?: string | null
           created_at?: string
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relationship?: string | null
+          employee_number?: string | null
+          employment_type?:
+            | Database["public"]["Enums"]["employment_type"]
+            | null
+          first_name?: string | null
           full_name?: string
+          group_id?: string | null
+          hire_date?: string | null
           id?: string
           is_active?: boolean
+          last_name?: string | null
+          notes?: string | null
           phone?: string | null
           position?: string | null
+          status?: Database["public"]["Enums"]["employee_status"]
+          termination_date?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -634,6 +808,13 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employees_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
             referencedColumns: ["id"]
           },
         ]
@@ -1185,6 +1366,108 @@ export type Database = {
           },
         ]
       }
+      payroll_payment_sources: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_payment_sources_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          employee_id: string
+          id: string
+          notes: string | null
+          paid_at: string
+          payment_method: Database["public"]["Enums"]["payroll_payment_method"]
+          payment_type: Database["public"]["Enums"]["payroll_payment_type"]
+          payroll_id: string
+          reference: string | null
+          source_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          employee_id: string
+          id?: string
+          notes?: string | null
+          paid_at?: string
+          payment_method?: Database["public"]["Enums"]["payroll_payment_method"]
+          payment_type?: Database["public"]["Enums"]["payroll_payment_type"]
+          payroll_id: string
+          reference?: string | null
+          source_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string
+          payment_method?: Database["public"]["Enums"]["payroll_payment_method"]
+          payment_type?: Database["public"]["Enums"]["payroll_payment_type"]
+          payroll_id?: string
+          reference?: string | null
+          source_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_payments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_payments_payroll_id_fkey"
+            columns: ["payroll_id"]
+            isOneToOne: false
+            referencedRelation: "employee_payrolls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_payments_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_payment_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       price_versions: {
         Row: {
           created_at: string
@@ -1472,6 +1755,16 @@ export type Database = {
       }
     }
     Functions: {
+      add_employee_salary: {
+        Args: {
+          _base_salary: number
+          _currency: string
+          _effective_from: string
+          _employee_id: string
+          _notes: string
+        }
+        Returns: string
+      }
       adjust_charge: {
         Args: { _charge_id: string; _new_amount: number; _reason: string }
         Returns: undefined
@@ -1499,6 +1792,10 @@ export type Database = {
           client_id: string
           contract_id: string
         }[]
+      }
+      generate_monthly_payroll: {
+        Args: { _branch_id: string; _period_month: string }
+        Returns: number
       }
       has_any_role: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
@@ -1531,6 +1828,7 @@ export type Database = {
         Returns: undefined
       }
       recompute_one_charge: { Args: { _charge_id: string }; Returns: undefined }
+      recompute_payroll: { Args: { _payroll_id: string }; Returns: undefined }
       reopen_child_attendance: {
         Args: { _child_id: string; _note?: string }
         Returns: Json
@@ -1551,6 +1849,13 @@ export type Database = {
         | "cancelled"
         | "completed"
       discount_type: "percentage" | "fixed"
+      employee_status: "active" | "paused" | "archived"
+      employment_type:
+        | "full_time"
+        | "part_time"
+        | "contract"
+        | "intern"
+        | "other"
       lead_source:
         | "instagram"
         | "facebook"
@@ -1573,6 +1878,19 @@ export type Database = {
         | "converted"
         | "archived"
       payment_status: "posted" | "void"
+      payroll_payment_method:
+        | "bank_transfer"
+        | "card_transfer"
+        | "cash"
+        | "other"
+      payroll_payment_type:
+        | "advance"
+        | "salary"
+        | "cash_part"
+        | "bonus"
+        | "adjustment"
+        | "other"
+      payroll_status: "not_paid" | "partial" | "paid" | "overpaid"
       timeline_event_type:
         | "lead_created"
         | "status_changed"
@@ -1722,6 +2040,14 @@ export const Constants = {
         "completed",
       ],
       discount_type: ["percentage", "fixed"],
+      employee_status: ["active", "paused", "archived"],
+      employment_type: [
+        "full_time",
+        "part_time",
+        "contract",
+        "intern",
+        "other",
+      ],
       lead_source: [
         "instagram",
         "facebook",
@@ -1746,6 +2072,21 @@ export const Constants = {
         "archived",
       ],
       payment_status: ["posted", "void"],
+      payroll_payment_method: [
+        "bank_transfer",
+        "card_transfer",
+        "cash",
+        "other",
+      ],
+      payroll_payment_type: [
+        "advance",
+        "salary",
+        "cash_part",
+        "bonus",
+        "adjustment",
+        "other",
+      ],
+      payroll_status: ["not_paid", "partial", "paid", "overpaid"],
       timeline_event_type: [
         "lead_created",
         "status_changed",
