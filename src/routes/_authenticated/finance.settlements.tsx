@@ -371,7 +371,7 @@ function InvoicesTab() {
           contracts={Array.from(new Map(rows.map((r) => [r.contract_id, {
             contract_id: r.contract_id,
             client_name: r.client_name,
-            group_id: (r as any).contracts?.children?.group_id ?? null,
+            group_id: (r as any).group_id ?? null,
             group_name: r.group_name,
             current: r.breakdown.base_price,
           }])).values())}
