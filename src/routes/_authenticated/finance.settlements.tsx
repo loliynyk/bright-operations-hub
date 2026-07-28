@@ -164,10 +164,9 @@ function InvoicesTab() {
   }, [rows]);
 
   const groups = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const r of rows) if (r.group_name) m.set((r as any).contracts?.children?.group_id ?? r.group_name, r.group_name);
-    return Array.from(m.entries()).map(([id, name]) => ({ id, name }));
-  }, [rows]);
+    const branchGroups = (lookups?.groups ?? []).filter((g: any) => !branch.id || !g.branch_id || g.branch_id === branch.id);
+    return branchGroups.map((g: any) => ({ id: g.id as string, name: g.name as string }));
+  }, [lookups, branch.id]);
 
   const extendMut = useMutation({
     mutationFn: () => extendFn({ data: { branch_id: branch.id || null } }),
