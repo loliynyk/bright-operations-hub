@@ -93,12 +93,6 @@ function ChildCard() {
     const arr = data.contracts as any[];
     return arr.find((c) => c.status !== "cancelled" && c.status !== "completed" && c.status !== "draft") ?? arr[0] ?? null;
   }, [data]);
-  const debt = useMemo(() => {
-    if (!data) return 0;
-    return (data.charges as any[])
-      .filter((c) => c.status !== "cancelled")
-      .reduce((s, c) => s + Math.max(0, Number(c.amount) - Number(c.paid_amount ?? 0)), 0);
-  }, [data]);
 
   if (isLoading || !data) return <PageContainer><p className="text-muted-foreground">Завантаження...</p></PageContainer>;
 
