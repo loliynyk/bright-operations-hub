@@ -28,6 +28,7 @@ function LeadDetail() {
   const getFn = useServerFn(getLead);
   const saveFn = useServerFn(saveLead);
   const convertFn = useServerFn(convertLeadToClient);
+  const statuses = useLeadStatuses();
 
   const { data, isLoading } = useQuery({ queryKey: ["lead", id], queryFn: () => getFn({ data: { id } }) });
 
