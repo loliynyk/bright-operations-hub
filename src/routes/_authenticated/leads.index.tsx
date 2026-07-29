@@ -183,12 +183,11 @@ function LeadsIndex() {
                   onSelect: () => navigate({ to: "/leads/$id", params: { id: r.id } }),
                 },
                 {
-                  label: "Перевести в архів",
-                  icon: <Archive className="h-3.5 w-3.5" />,
+                  label: "Видалити",
+                  icon: <Trash2 className="h-3.5 w-3.5" />,
                   destructive: true,
-                  disabled: r.status === "archived",
                   separatorBefore: true,
-                  onSelect: () => setArchiving(r),
+                  onSelect: () => setDeleting(r),
                 },
               ]}
             />
@@ -196,15 +195,15 @@ function LeadsIndex() {
         />
       </SectionCard>
 
-      {archiving ? (
+      {deleting ? (
         <ConfirmDeleteDialog
-          open={!!archiving}
-          onOpenChange={(o) => !o && setArchiving(null)}
-          entityName={archiving.parent_name || "лід"}
-          variant="archive"
-          impact="Лід буде переміщено в архів. Історія та таймлайн збережуться."
-          isPending={archiveMutation.isPending}
-          onConfirm={() => archiveMutation.mutateAsync(archiving)}
+          open={!!deleting}
+          onOpenChange={(o) => !o && setDeleting(null)}
+          entityName={deleting.parent_name || "лід"}
+          variant="delete"
+          impact="Ліда буде видалено назавжди. Пов'язаний клієнт (якщо є) залишиться, але посилання на лід буде очищено. Історія таймлайну видалиться разом з лідом."
+          isPending={deleteMutation.isPending}
+          onConfirm={() => deleteMutation.mutateAsync(deleting)}
         />
       ) : null}
     </PageContainer>
