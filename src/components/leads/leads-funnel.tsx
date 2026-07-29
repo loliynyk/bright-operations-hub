@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
+import { useLeadStatuses } from "@/lib/hooks/use-lead-statuses";
 
 export type FunnelStage = {
   key: string;
