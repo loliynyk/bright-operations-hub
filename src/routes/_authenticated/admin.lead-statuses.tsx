@@ -87,14 +87,23 @@ function StatusForm({ row, onSave, onDelete }: { row: any | null; onSave: (v: an
   });
   const [confirmDel, setConfirmDel] = useState(false);
   const save = useMutation({
-    mutationFn: () => onSave({
-      id: v.id,
-      code: v.code.trim(),
-      label: v.label.trim(),
-      tone: v.tone,
-      sort_order: Number(v.sort_order) || 0,
-      is_active: v.is_active,
-    }),
+    mutationFn: () => onSave(
+      v.id
+        ? {
+            id: v.id,
+            label: v.label.trim(),
+            tone: v.tone,
+            sort_order: Number(v.sort_order) || 0,
+            is_active: v.is_active,
+          }
+        : {
+            code: v.code.trim(),
+            label: v.label.trim(),
+            tone: v.tone,
+            sort_order: Number(v.sort_order) || 0,
+            is_active: v.is_active,
+          },
+    ),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["lead-statuses"] }),
     onError: (e: any) => toast.error("Помилка", { description: e.message }),
   });
@@ -104,7 +113,8 @@ function StatusForm({ row, onSave, onDelete }: { row: any | null; onSave: (v: an
     onError: (e: any) => toast.error("Помилка", { description: e.message }),
   });
 
-  const codeLocked = !!row && !!v.is_system;
+  // Codes are immutable after creation for every status (system or custom).
+  const codeLocked = !!row;
   const activeLocked = !!row && (v.code === "new" || v.code === "converted");
 
   return (
@@ -113,7 +123,7 @@ function StatusForm({ row, onSave, onDelete }: { row: any | null; onSave: (v: an
         <div>
           <Label>Код</Label>
           <Input value={v.code} onChange={(e) => setV({ ...v, code: e.target.value })} disabled={codeLocked} placeholder="new_status" />
-          {codeLocked ? <p className="mt-1 text-xs text-muted-foreground">Системний код не редагується.</p> : null}
+          {codeLocked ? <p className="mt-1 text-xs text-muted-foreground">Код фіксується під час створення.</p> : null}
         </div>
         <div>
           <Label>Назва</Label>
