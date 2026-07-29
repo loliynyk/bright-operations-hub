@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { PrimaryButton, StatusBadge } from "@/components/ds";
 import { ConfirmDeleteDialog } from "@/components/ds/confirm-delete-dialog";
-import { listLeadStatuses, upsertLeadStatus, deleteLeadStatus } from "@/lib/settings.functions";
+import { listLeadStatuses, upsertLeadStatus, deleteLeadStatus, setLeadStatusActive } from "@/lib/settings.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/lead-statuses")({
   component: LeadStatusesPage,
