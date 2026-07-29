@@ -1162,7 +1162,7 @@ export type Database = {
           service_id: string | null
           source: Database["public"]["Enums"]["lead_source"] | null
           source_form: string | null
-          status: Database["public"]["Enums"]["lead_status"]
+          status: string
           trial_date: string | null
           updated_at: string
         }
@@ -1191,7 +1191,7 @@ export type Database = {
           service_id?: string | null
           source?: Database["public"]["Enums"]["lead_source"] | null
           source_form?: string | null
-          status?: Database["public"]["Enums"]["lead_status"]
+          status?: string
           trial_date?: string | null
           updated_at?: string
         }
@@ -1220,7 +1220,7 @@ export type Database = {
           service_id?: string | null
           source?: Database["public"]["Enums"]["lead_source"] | null
           source_form?: string | null
-          status?: Database["public"]["Enums"]["lead_status"]
+          status?: string
           trial_date?: string | null
           updated_at?: string
         }
@@ -1245,6 +1245,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "services"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_status_fkey"
+            columns: ["status"]
+            isOneToOne: false
+            referencedRelation: "lead_statuses"
+            referencedColumns: ["code"]
           },
         ]
       }
