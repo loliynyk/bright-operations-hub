@@ -147,13 +147,13 @@ function LeadsIndex() {
                 {statusFilter.length === 0
                   ? "Усі статуси"
                   : statusFilter.length === 1
-                    ? statusLabel(statusFilter[0])
+                    ? statuses.label(statusFilter[0])
                     : `Фільтр (${statusFilter.length})`}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Усі статуси</SelectItem>
-              {LEAD_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+              {statuses.all.map((s) => <SelectItem key={s.code} value={s.code}>{s.label}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={sourceFilter} onValueChange={setSourceFilter}>
