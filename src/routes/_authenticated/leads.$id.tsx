@@ -130,7 +130,7 @@ function LeadDetail() {
             <Select value={current?.status ?? "new"} onValueChange={(v) => save.mutate({ status: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {LEAD_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                {statuses.assignableFor(current?.status).map((s) => <SelectItem key={s.code} value={s.code}>{s.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </SectionCard>
