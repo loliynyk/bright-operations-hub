@@ -30,6 +30,7 @@ const fmtMoney = (n: number) => `${fmt(n)} ₴`;
 export function OverviewDashboard() {
   const { branch } = useBranch();
   const fn = useServerFn(getOverviewDashboard);
+  const statuses = useLeadStatuses();
   const { data, isLoading } = useQuery({
     queryKey: ["overview-dashboard", branch.id],
     queryFn: () => fn({ data: { branchId: branch.id } }),
