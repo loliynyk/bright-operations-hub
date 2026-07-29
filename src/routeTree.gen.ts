@@ -33,6 +33,7 @@ import { Route as AuthenticatedAdminServicesRouteImport } from './routes/_authen
 import { Route as AuthenticatedAdminRolesRouteImport } from './routes/_authenticated/admin.roles'
 import { Route as AuthenticatedAdminPriceListsRouteImport } from './routes/_authenticated/admin.price-lists'
 import { Route as AuthenticatedAdminPaymentMethodsRouteImport } from './routes/_authenticated/admin.payment-methods'
+import { Route as AuthenticatedAdminLeadStatusesRouteImport } from './routes/_authenticated/admin.lead-statuses'
 import { Route as AuthenticatedAdminLeadSourcesRouteImport } from './routes/_authenticated/admin.lead-sources'
 import { Route as AuthenticatedAdminIncomeCategoriesRouteImport } from './routes/_authenticated/admin.income-categories'
 import { Route as AuthenticatedAdminGroupsRouteImport } from './routes/_authenticated/admin.groups'
@@ -175,6 +176,12 @@ const AuthenticatedAdminPaymentMethodsRoute =
     path: '/admin/payment-methods',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminLeadStatusesRoute =
+  AuthenticatedAdminLeadStatusesRouteImport.update({
+    id: '/admin/lead-statuses',
+    path: '/admin/lead-statuses',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminLeadSourcesRoute =
   AuthenticatedAdminLeadSourcesRouteImport.update({
     id: '/admin/lead-sources',
@@ -249,6 +256,7 @@ export interface FileRoutesByFullPath {
   '/admin/groups': typeof AuthenticatedAdminGroupsRoute
   '/admin/income-categories': typeof AuthenticatedAdminIncomeCategoriesRoute
   '/admin/lead-sources': typeof AuthenticatedAdminLeadSourcesRoute
+  '/admin/lead-statuses': typeof AuthenticatedAdminLeadStatusesRoute
   '/admin/payment-methods': typeof AuthenticatedAdminPaymentMethodsRoute
   '/admin/price-lists': typeof AuthenticatedAdminPriceListsRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
@@ -284,6 +292,7 @@ export interface FileRoutesByTo {
   '/admin/groups': typeof AuthenticatedAdminGroupsRoute
   '/admin/income-categories': typeof AuthenticatedAdminIncomeCategoriesRoute
   '/admin/lead-sources': typeof AuthenticatedAdminLeadSourcesRoute
+  '/admin/lead-statuses': typeof AuthenticatedAdminLeadStatusesRoute
   '/admin/payment-methods': typeof AuthenticatedAdminPaymentMethodsRoute
   '/admin/price-lists': typeof AuthenticatedAdminPriceListsRoute
   '/admin/roles': typeof AuthenticatedAdminRolesRoute
@@ -321,6 +330,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/groups': typeof AuthenticatedAdminGroupsRoute
   '/_authenticated/admin/income-categories': typeof AuthenticatedAdminIncomeCategoriesRoute
   '/_authenticated/admin/lead-sources': typeof AuthenticatedAdminLeadSourcesRoute
+  '/_authenticated/admin/lead-statuses': typeof AuthenticatedAdminLeadStatusesRoute
   '/_authenticated/admin/payment-methods': typeof AuthenticatedAdminPaymentMethodsRoute
   '/_authenticated/admin/price-lists': typeof AuthenticatedAdminPriceListsRoute
   '/_authenticated/admin/roles': typeof AuthenticatedAdminRolesRoute
@@ -358,6 +368,7 @@ export interface FileRouteTypes {
     | '/admin/groups'
     | '/admin/income-categories'
     | '/admin/lead-sources'
+    | '/admin/lead-statuses'
     | '/admin/payment-methods'
     | '/admin/price-lists'
     | '/admin/roles'
@@ -393,6 +404,7 @@ export interface FileRouteTypes {
     | '/admin/groups'
     | '/admin/income-categories'
     | '/admin/lead-sources'
+    | '/admin/lead-statuses'
     | '/admin/payment-methods'
     | '/admin/price-lists'
     | '/admin/roles'
@@ -429,6 +441,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/groups'
     | '/_authenticated/admin/income-categories'
     | '/_authenticated/admin/lead-sources'
+    | '/_authenticated/admin/lead-statuses'
     | '/_authenticated/admin/payment-methods'
     | '/_authenticated/admin/price-lists'
     | '/_authenticated/admin/roles'
@@ -628,6 +641,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminPaymentMethodsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/lead-statuses': {
+      id: '/_authenticated/admin/lead-statuses'
+      path: '/admin/lead-statuses'
+      fullPath: '/admin/lead-statuses'
+      preLoaderRoute: typeof AuthenticatedAdminLeadStatusesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/lead-sources': {
       id: '/_authenticated/admin/lead-sources'
       path: '/admin/lead-sources'
@@ -723,6 +743,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminGroupsRoute: typeof AuthenticatedAdminGroupsRoute
   AuthenticatedAdminIncomeCategoriesRoute: typeof AuthenticatedAdminIncomeCategoriesRoute
   AuthenticatedAdminLeadSourcesRoute: typeof AuthenticatedAdminLeadSourcesRoute
+  AuthenticatedAdminLeadStatusesRoute: typeof AuthenticatedAdminLeadStatusesRoute
   AuthenticatedAdminPaymentMethodsRoute: typeof AuthenticatedAdminPaymentMethodsRoute
   AuthenticatedAdminPriceListsRoute: typeof AuthenticatedAdminPriceListsRoute
   AuthenticatedAdminRolesRoute: typeof AuthenticatedAdminRolesRoute
@@ -759,6 +780,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminIncomeCategoriesRoute:
     AuthenticatedAdminIncomeCategoriesRoute,
   AuthenticatedAdminLeadSourcesRoute: AuthenticatedAdminLeadSourcesRoute,
+  AuthenticatedAdminLeadStatusesRoute: AuthenticatedAdminLeadStatusesRoute,
   AuthenticatedAdminPaymentMethodsRoute: AuthenticatedAdminPaymentMethodsRoute,
   AuthenticatedAdminPriceListsRoute: AuthenticatedAdminPriceListsRoute,
   AuthenticatedAdminRolesRoute: AuthenticatedAdminRolesRoute,
