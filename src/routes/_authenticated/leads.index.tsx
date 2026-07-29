@@ -66,10 +66,14 @@ function LeadsIndex() {
     mutationFn: (v: { id: string; status: string }) => updateStatusFn({ data: v }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["leads", branch.id] }),
   });
-  const archiveMutation = useMutation({
-    mutationFn: (row: any) =>
-      saveFn({ data: { id: row.id, status: "archived", parent_name: row.parent_name } as any }),
-    onSuccess: () => { toast.success("Ліда переведено в архів"); qc.invalidateQueries({ queryKey: ["leads", branch.id] }); setArchiving(null); },
+  const deleteMutation = useMutation({
+    mutationFn: (row: any) => deleteFn({ data: { id: row.id } }),
+    onSuccess: () => {
+      toast.success("Ліда видалено");
+      qc.invalidateQueries({ queryKey: ["leads", branch.id] });
+      qc.invalidateQueries({ queryKey: ["overview", branch.id] });
+      setDeleting(null);
+    },
     onError: (e: any) => toast.error("Помилка", { description: e.message }),
   });
 
