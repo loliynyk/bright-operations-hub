@@ -76,6 +76,14 @@ const upsertSchema = z.object({
   assigned_to: z.string().uuid().nullable().optional(),
 });
 
+async function assertStatusAssignable(ctx: any, code: string) {
+  const { data, error } = await ctx.supabase
+    .from("lead_statuses").select("code, is_active").eq("code", code).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error(`Невідомий статус: ${code}`);
+  if (!data.is_active) throw new Error("Цей статус неактивний і не може бути призначений");
+}
+
 export const saveLead = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => upsertSchema.parse(d))
@@ -89,6 +97,10 @@ export const saveLead = createServerFn({ method: "POST" })
 
     if (id) {
       const prev = await context.supabase.from("leads").select("status").eq("id", id).maybeSingle();
+      // Only validate status when it actually changes — allow saving unrelated edits on leads whose historical status is now inactive.
+      if (payload.status && prev.data?.status !== payload.status) {
+        await assertStatusAssignable(context, payload.status);
+      }
       const { data: updated, error } = await context.supabase
         .from("leads").update(row).eq("id", id).select().maybeSingle();
       if (error) throw new Error(error.message);
@@ -100,6 +112,7 @@ export const saveLead = createServerFn({ method: "POST" })
       }
       return updated;
     } else {
+      if (payload.status) await assertStatusAssignable(context, payload.status);
       const { data: created, error } = await context.supabase
         .from("leads").insert({ ...row, created_by: context.userId }).select().maybeSingle();
       if (error) throw new Error(error.message);
@@ -116,7 +129,10 @@ export const deleteLead = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ context, data }) => {
-    const { error } = await context.supabase.from("leads").delete().eq("id", data.id);
+    const { data: rows, error } = await context.supabase
+      .from("leads").delete().eq("id", data.id).select("id");
     if (error) throw new Error(error.message);
-    return { ok: true };
+    if (!rows || rows.length === 0) throw new Error("Лід не знайдено або вже видалено");
+    return { ok: true, id: rows[0].id };
   });
+
