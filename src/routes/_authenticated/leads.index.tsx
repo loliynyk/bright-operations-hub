@@ -36,7 +36,8 @@ function LeadsIndex() {
   const listFn = useServerFn(listLeads);
   const lookupsFn = useServerFn(listLookups);
   const updateStatusFn = useServerFn(updateLeadStatus);
-  const saveFn = useServerFn(saveLead);
+  const deleteFn = useServerFn(deleteLead);
+  const statuses = useLeadStatuses();
 
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["leads", branch.id],
@@ -48,7 +49,7 @@ function LeadsIndex() {
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [open, setOpen] = useState(false);
-  const [archiving, setArchiving] = useState<any | null>(null);
+  const [deleting, setDeleting] = useState<any | null>(null);
 
   const filtered = (leads as any[]).filter((l) => {
     if (statusFilter.length && !statusFilter.includes(l.status)) return false;
