@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Plus, ExternalLink, Archive } from "lucide-react";
+import { Plus, ExternalLink, Trash2 } from "lucide-react";
 import { PageContainer, PageHeader, SectionCard, PrimaryButton, SearchInput } from "@/components/ds";
 import { FilterBar } from "@/components/ds/list-toolbar";
 import { InlineStatusSelect } from "@/components/ds/inline-status-select";
@@ -15,10 +15,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { listLeads, saveLead } from "@/lib/leads.functions";
+import { listLeads, saveLead, deleteLead } from "@/lib/leads.functions";
 import { updateLeadStatus } from "@/lib/overview.functions";
 import { listLookups } from "@/lib/lookups.functions";
-import { statusLabel, sourceLabel, LEAD_STATUSES, LEAD_SOURCES } from "@/lib/leads";
+import { sourceLabel, LEAD_SOURCES } from "@/lib/leads";
+import { useLeadStatuses } from "@/lib/hooks/use-lead-statuses";
 import { useBranch } from "@/lib/branch-context";
 import { LeadsFunnel } from "@/components/leads/leads-funnel";
 
@@ -35,7 +36,8 @@ function LeadsIndex() {
   const listFn = useServerFn(listLeads);
   const lookupsFn = useServerFn(listLookups);
   const updateStatusFn = useServerFn(updateLeadStatus);
-  const saveFn = useServerFn(saveLead);
+  const deleteFn = useServerFn(deleteLead);
+  const statuses = useLeadStatuses();
 
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["leads", branch.id],
@@ -47,7 +49,7 @@ function LeadsIndex() {
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [open, setOpen] = useState(false);
-  const [archiving, setArchiving] = useState<any | null>(null);
+  const [deleting, setDeleting] = useState<any | null>(null);
 
   const filtered = (leads as any[]).filter((l) => {
     if (statusFilter.length && !statusFilter.includes(l.status)) return false;
@@ -64,10 +66,14 @@ function LeadsIndex() {
     mutationFn: (v: { id: string; status: string }) => updateStatusFn({ data: v }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["leads", branch.id] }),
   });
-  const archiveMutation = useMutation({
-    mutationFn: (row: any) =>
-      saveFn({ data: { id: row.id, status: "archived", parent_name: row.parent_name } as any }),
-    onSuccess: () => { toast.success("Ліда переведено в архів"); qc.invalidateQueries({ queryKey: ["leads", branch.id] }); setArchiving(null); },
+  const deleteMutation = useMutation({
+    mutationFn: (row: any) => deleteFn({ data: { id: row.id } }),
+    onSuccess: () => {
+      toast.success("Ліда видалено");
+      qc.invalidateQueries({ queryKey: ["leads", branch.id] });
+      qc.invalidateQueries({ queryKey: ["overview", branch.id] });
+      setDeleting(null);
+    },
     onError: (e: any) => toast.error("Помилка", { description: e.message }),
   });
 
@@ -89,11 +95,11 @@ function LeadsIndex() {
     {
       key: "status",
       header: "Статус",
-      sortAccessor: (r) => statusLabel(r.status),
+      sortAccessor: (r) => statuses.label(r.status),
       render: (r) => (
         <InlineStatusSelect
           value={r.status}
-          options={LEAD_STATUSES.map((s) => ({ value: s.value, label: s.label }))}
+          options={statuses.assignableFor(r.status).map((s) => ({ value: s.code, label: s.label }))}
           onChange={(next) => statusMutation.mutateAsync({ id: r.id, status: next })}
           ariaLabel="Змінити статус"
         />
@@ -141,13 +147,13 @@ function LeadsIndex() {
                 {statusFilter.length === 0
                   ? "Усі статуси"
                   : statusFilter.length === 1
-                    ? statusLabel(statusFilter[0])
+                    ? statuses.label(statusFilter[0])
                     : `Фільтр (${statusFilter.length})`}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Усі статуси</SelectItem>
-              {LEAD_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+              {statuses.all.map((s) => <SelectItem key={s.code} value={s.code}>{s.label}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={sourceFilter} onValueChange={setSourceFilter}>
@@ -177,12 +183,11 @@ function LeadsIndex() {
                   onSelect: () => navigate({ to: "/leads/$id", params: { id: r.id } }),
                 },
                 {
-                  label: "Перевести в архів",
-                  icon: <Archive className="h-3.5 w-3.5" />,
+                  label: "Видалити",
+                  icon: <Trash2 className="h-3.5 w-3.5" />,
                   destructive: true,
-                  disabled: r.status === "archived",
                   separatorBefore: true,
-                  onSelect: () => setArchiving(r),
+                  onSelect: () => setDeleting(r),
                 },
               ]}
             />
@@ -190,15 +195,15 @@ function LeadsIndex() {
         />
       </SectionCard>
 
-      {archiving ? (
+      {deleting ? (
         <ConfirmDeleteDialog
-          open={!!archiving}
-          onOpenChange={(o) => !o && setArchiving(null)}
-          entityName={archiving.parent_name || "лід"}
-          variant="archive"
-          impact="Лід буде переміщено в архів. Історія та таймлайн збережуться."
-          isPending={archiveMutation.isPending}
-          onConfirm={() => archiveMutation.mutateAsync(archiving)}
+          open={!!deleting}
+          onOpenChange={(o) => !o && setDeleting(null)}
+          entityName={deleting.parent_name || "лід"}
+          variant="delete"
+          impact="Ліда буде видалено назавжди. Пов'язаний клієнт (якщо є) залишиться, але посилання на лід буде очищено. Історія таймлайну видалиться разом з лідом."
+          isPending={deleteMutation.isPending}
+          onConfirm={() => deleteMutation.mutateAsync(deleting)}
         />
       ) : null}
     </PageContainer>

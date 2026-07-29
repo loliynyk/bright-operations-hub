@@ -20,7 +20,7 @@ import { KpiGrid } from "@/components/ds/kpi-grid";
 import { Progress } from "@/components/ui/progress";
 import { useBranch } from "@/lib/branch-context";
 import { getOverviewDashboard } from "@/lib/overview.functions";
-import { statusLabel } from "@/lib/leads";
+import { useLeadStatuses } from "@/lib/hooks/use-lead-statuses";
 import { formatDate } from "@/components/ds/data-table";
 
 const fmt = (n: number) =>
@@ -30,6 +30,7 @@ const fmtMoney = (n: number) => `${fmt(n)} ₴`;
 export function OverviewDashboard() {
   const { branch } = useBranch();
   const fn = useServerFn(getOverviewDashboard);
+  const statuses = useLeadStatuses();
   const { data, isLoading } = useQuery({
     queryKey: ["overview-dashboard", branch.id],
     queryFn: () => fn({ data: { branchId: branch.id } }),
@@ -74,7 +75,7 @@ export function OverviewDashboard() {
               {stageEntries.map(([status, count]) => (
                 <li key={status} className="space-y-1.5">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-foreground">{statusLabel(status)}</span>
+                    <span className="text-foreground">{statuses.label(status)}</span>
                     <span className="tabular-nums font-medium text-foreground">{count}</span>
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-muted">
@@ -185,7 +186,7 @@ export function OverviewDashboard() {
                       <Link to="/leads/$id" params={{ id: l.id }} className="text-primary hover:underline">
                         {l.parent_name || "—"}
                       </Link>
-                      <StatusBadge tone="info"><span className="ml-1 text-[10px]">{statusLabel(l.status)}</span></StatusBadge>
+                      <StatusBadge tone="info"><span className="ml-1 text-[10px]">{statuses.label(l.status)}</span></StatusBadge>
                     </li>
                   ))}
                 </ul>

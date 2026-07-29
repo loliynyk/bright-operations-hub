@@ -1100,6 +1100,42 @@ export type Database = {
           },
         ]
       }
+      lead_statuses: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_system: boolean
+          label: string
+          sort_order: number
+          tone: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          label: string
+          sort_order?: number
+          tone?: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          label?: string
+          sort_order?: number
+          tone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           assigned_to: string | null

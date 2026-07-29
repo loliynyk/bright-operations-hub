@@ -13,7 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getLead, saveLead } from "@/lib/leads.functions";
 import { convertLeadToClient } from "@/lib/admissions.functions";
-import { LEAD_STATUSES, LEAD_SOURCES, statusLabel, statusTone } from "@/lib/leads";
+import { LEAD_SOURCES } from "@/lib/leads";
+import { useLeadStatuses } from "@/lib/hooks/use-lead-statuses";
 import { Timeline } from "@/components/timeline";
 
 export const Route = createFileRoute("/_authenticated/leads/$id")({
@@ -27,6 +28,7 @@ function LeadDetail() {
   const getFn = useServerFn(getLead);
   const saveFn = useServerFn(saveLead);
   const convertFn = useServerFn(convertLeadToClient);
+  const statuses = useLeadStatuses();
 
   const { data, isLoading } = useQuery({ queryKey: ["lead", id], queryFn: () => getFn({ data: { id } }) });
 
@@ -69,8 +71,8 @@ function LeadDetail() {
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Лід</p>
             <h1 className="text-2xl font-semibold tracking-tight">{lead.parent_name}</h1>
           </div>
-          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusTone(lead.status)}`}>
-            {statusLabel(lead.status)}
+          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statuses.tone(lead.status)}`}>
+            {statuses.label(lead.status)}
           </span>
         </div>
         <div className="flex gap-2">
@@ -128,7 +130,7 @@ function LeadDetail() {
             <Select value={current?.status ?? "new"} onValueChange={(v) => save.mutate({ status: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {LEAD_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                {statuses.assignableFor(current?.status).map((s) => <SelectItem key={s.code} value={s.code}>{s.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </SectionCard>
