@@ -13,7 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getLead, saveLead } from "@/lib/leads.functions";
 import { convertLeadToClient } from "@/lib/admissions.functions";
-import { LEAD_STATUSES, LEAD_SOURCES, statusLabel, statusTone } from "@/lib/leads";
+import { LEAD_SOURCES } from "@/lib/leads";
+import { useLeadStatuses } from "@/lib/hooks/use-lead-statuses";
 import { Timeline } from "@/components/timeline";
 
 export const Route = createFileRoute("/_authenticated/leads/$id")({
