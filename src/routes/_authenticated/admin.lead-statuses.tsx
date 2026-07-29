@@ -35,18 +35,17 @@ function LeadStatusesPage() {
   const listFn = useServerFn(listLeadStatuses);
   const upsertFn = useServerFn(upsertLeadStatus);
   const deleteFn = useServerFn(deleteLeadStatus);
+  const setActiveFn = useServerFn(setLeadStatusActive);
 
   return (
     <SettingsShell
       title="Статуси лідів"
-      description="Керуйте назвами, кольорами та порядком статусів лідів. Системні статуси захищені від видалення."
+      description="Керуйте назвами, кольорами та порядком статусів лідів. Код фіксується під час створення. Системні статуси захищені від видалення."
       icon={Tags}
       listQueryKey={["lead-statuses"]}
       listFn={() => listFn() as any}
-      // archiveFn is unused for this table (delete/deactivate handled inside form) but required by shell
       archiveFn={async ({ id, is_active }) => {
-        // Toggle active flag through upsert
-        await upsertFn({ data: { id, is_active } as any });
+        await setActiveFn({ data: { id, is_active } });
       }}
       addLabel="Створити статус"
       columns={[
