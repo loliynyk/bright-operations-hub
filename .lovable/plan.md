@@ -1,73 +1,101 @@
-# Bright OS — Usability Layer
+## Ticket A — Configurable Lead statuses (admin-managed)
 
-Scope is very large. To ship safely, this pass introduces the shared primitives and applies them consistently across every list, then refactors Business Overview into a real dashboard. No production data is mutated.
+### Current state (verified)
+- `public.lead_status` enum drives `leads.status`; values in use: `archived, contacted, contract, converted, lost, new, waiting` (plus enum-only unused ones).
+- UI constants: `src/lib/leads.ts` (`LEAD_STATUSES` — value/label/tone), consumed by:
+  - `src/routes/_authenticated/leads.index.tsx` (filter, inline status select, funnel)
+  - `src/routes/_authenticated/leads.$id.tsx` (badge, status dropdown)
+  - `src/components/leads/leads-funnel.tsx` (`FUNNEL_STAGES` groups)
+  - `src/components/overview/dashboard.tsx` (labels only)
+- `convert_lead_to_client` RPC sets `status='converted'` (system-protected).
+- Admin routes follow the `SettingsShell` + `listX/upsertX/archiveX` pattern (see `admin.expense-categories.tsx`, `src/lib/settings.functions.ts`). `admin.lead-sources.tsx` is currently a placeholder — reuse that slot's neighborhood but add a new route for statuses.
+- Nav is registered in `src/lib/nav.ts` under "Адміністрування".
 
-## Shared primitives (new files)
+### Design — smallest safe schema
 
-- `src/components/ds/list-toolbar.tsx` — `ListToolbar`, `FilterBar`, `ActiveFilterChips` (reset + visible active state).
-- `src/components/ds/kpi-grid.tsx` — `KpiGrid` wrapping `MetricCard` with responsive 3–5 column layout.
-- `src/components/ds/clickable-row.tsx` — helper: `onRowClick(id, navigate)` + `stopRow` helper; `role=button`, `tabIndex=0`, Enter/Space handlers. Extend `DataTable` with optional `onRowClick`/`rowHref` so entire row is clickable, keyboard-focusable, and hover styled; internal actions call `e.stopPropagation()`.
-- `src/components/ds/inline-status-select.tsx` — compact popover Select with optimistic update, toast, rollback.
-- `src/components/ds/row-actions-menu.tsx` — `MoreHorizontal` dropdown ("Відкрити", edit, delete/archive), stops propagation.
-- `src/components/ds/confirm-delete-dialog.tsx` — named entity + impact copy + "Видалити"/"Архівувати" variants.
+New table `public.lead_statuses`:
+- `id uuid pk`
+- `code text unique not null` — stable machine code (e.g. `new`, `converted`, `custom_xyz`)
+- `label text not null` — Ukrainian display
+- `tone text not null default 'bg-muted text-foreground'` — badge class
+- `sort_order int not null default 100`
+- `is_active boolean not null default true` — assignable to new/changed leads
+- `is_system boolean not null default false` — cannot be deleted/renamed-code; label/tone/order editable
+- standard `created_at/updated_at` with trigger
 
-## Server functions
+Seed with all 12 current enum values, mapping labels/tones from `src/lib/leads.ts`. Mark as `is_system=true`: `new`, `converted` (required by RPC), `archived`, `lost` (terminal). Others start as regular (editable+deletable when unused).
 
-Add small, safe update fns only where missing (reuse existing where possible):
-- `updateLeadStatus`, `assignLead`
-- `updateClientStatus`, `assignClientGroup` (via child? — clients don't own group; skip if not modelled)
-- `assignChildGroup`, `setChildStatus` (route through existing `saveChild`/lifecycle RPCs; do NOT bypass departure RPC)
-- `setEmployeeActive`, `setGroupActive`, `setServiceActive`, `setDiscountActive`, `setPaymentMethodActive`, `setExpenseCategoryActive`, `setBranchActive`
-- Delete/archive: reuse existing archive server fns; add soft-archive where missing (branches, employees). Finance charges/payments: void/cancel only via existing RPCs, no hard delete.
+RLS/GRANTS:
+- `GRANT SELECT` to authenticated (needed on every page).
+- `GRANT INSERT/UPDATE/DELETE` to authenticated gated by `has_role('admin')` OR `has_role('manager')` in policies (mirroring existing settings tables).
+- `service_role` full.
 
-## Per-list application
+Keep `leads.status` typed as the existing `lead_status` enum for now — no destructive enum migration. `code` in `lead_statuses` matches enum values. To allow future custom statuses beyond the enum, add a follow-up (out of scope): switch column to `text` + FK; **not** part of this ticket to preserve data safety. Ticket only adds admin-editable **label/tone/order/is_active** for the existing codes — no new custom codes yet. This satisfies "authorized users can adjust them" without touching the enum or 396 rows.
 
-For each list add: FilterBar (real fields only), 3–5 KpiGrid tiles, clickable rows → detail route, RowActionsMenu (Open/Edit/Archive with ConfirmDeleteDialog), inline edits per list.
+### Migration for 396 existing records
+Zero-touch: enum stays, `leads.status` unchanged. Just insert 12 seed rows into `lead_statuses` matching current enum values. Historical leads with inactive statuses remain readable (SELECT everything) and filterable (funnel/filter show all statuses that appear in data OR that are active).
 
-| Page | Filters | KPIs | Inline edits | Destructive |
-|---|---|---|---|---|
-| Leads | search, status, source, assigned, desired_start month | open, new this month, trial scheduled, converted, lost | status, assignee | archive (soft) |
-| Clients | search, status | active clients, active children, contracts ending 30d, outstanding | status | archive |
-| Children | search, status, group, birth-year | active, without group, birthdays this month, leaving 30d | group, lifecycle→RPC | complete attendance (RPC) |
-| Employees | search, active, branch, position | active, per-branch | active toggle | deactivate |
-| Groups | active, age band | count, enrolled, available places, full | active | archive |
-| Services | active | active count | active | archive |
-| Discounts / Payment methods / Expense categories / Income cats | active, branch | count active | active | archive |
-| Branches | active | count | active | archive |
-| Users / Roles | search, role | — | role (existing) | remove role |
-| Finance Invoices | period, status, group, client search | charged, paid, outstanding, overdue | — | cancel charge (existing) |
-| Finance Payments | month window, client | current-month paid, outstanding | — | void (RPC) |
-| Expenses | period, category, branch | total this month, by category top | — | delete (owner) |
+### System protection rules (server + UI)
+- `upsertLeadStatus` server fn: if `row.is_system`, forbid changing `code` and `is_active=false` for `new`/`converted` (needed by intake and RPC). Allow label/tone/sort_order.
+- `deleteLeadStatus`: forbidden if `is_system=true` OR any lead currently references the code.
+- Client-side `updateLeadStatus`/inline select: assignable options = `is_active=true`. Historical rows display resolved label/tone regardless of active flag.
+- `convert_lead_to_client` untouched — still writes `'converted'`, which is a protected seed.
 
-Finance monetary/calculated fields remain read-only.
+### UI changes
+1. `src/lib/settings.functions.ts`: add `listLeadStatuses`, `upsertLeadStatus`, `deleteLeadStatus` (all require admin/manager for mutations; list open to authenticated).
+2. New route `src/routes/_authenticated/admin.lead-statuses.tsx` using `SettingsShell`, columns: Назва, Код (readonly), Порядок, Активний, Системний. Form fields: label, tone (predefined swatches from existing palette), sort_order, is_active. Delete disabled for system/in-use.
+3. `src/lib/nav.ts`: add `{ to: "/admin/lead-statuses", label: "Статуси лідів" }` under Адміністрування, near "Джерела лідів".
+4. Replace static `LEAD_STATUSES` reads with a shared hook `useLeadStatuses()` (React Query, cached, invalidated by admin mutations) used by:
+   - Leads index (filter, inline select — inline select filters by `is_active`, filter dropdown shows all with active first).
+   - Lead detail (status dropdown — same rule).
+   - Funnel: keep `FUNNEL_STAGES` groupings hard-coded (grouping is a product concept, not per-status editable), but resolve labels/tones from the hook so admin renames propagate.
+   - Overview dashboard `statusLabel` calls: replace with hook-based resolver (fallback to code if not loaded).
+5. Keep `src/lib/leads.ts` `LEAD_STATUSES` as a **fallback constant** used only if the hook has no data (SSR/first paint) — remove from active call sites.
 
-## Business Overview dashboard (`overview.tsx` + `src/components/overview/*`)
+### Notes
+- Removing `LEAD_STATUSES` from primary imports narrowly; not touching sources or contract statuses (out of scope).
+- Optional/future: allow custom codes beyond enum — explicitly deferred.
 
-Setup completion = all `getSetupReadiness` items true. While incomplete → keep `SetupChecklist`. When complete → render `<Dashboard>`; keep a collapsed "Показати прогрес налаштування" link.
+---
 
-Dashboard sections (branch-scoped, real data via new `getOverviewDashboard` server fn — one round-trip, aggregating):
-- KPIs: active clients, active children, open leads, month charged, month paid, outstanding.
-- Insights: leads-by-stage bar; new vs converted this month; group occupancy list (name, filled/capacity, progress bar); contracts starting 14d; contracts ending 30d; clients with outstanding (top 5).
-- Recent activity: 5 latest leads / clients / payments / timeline events.
-- Quick actions: Add lead, Onboard client, Open Finance, Manage groups (Link buttons).
+## Ticket B — "Видалити" permanently deletes lead
 
-Composed of small components under `src/components/overview/dashboard/` using existing `MetricCard`, `SectionCard`, `StatusBadge`, `Progress`. No new charting lib.
+### Current state (verified)
+- `src/routes/_authenticated/leads.index.tsx` row action is labeled "Перевести в архів" and calls `saveLead({status:'archived'})`; `ConfirmDeleteDialog` uses `variant="archive"`.
+- FKs are safe for hard delete: `clients.lead_id ON DELETE SET NULL`, `leads.converted_client_id SET NULL` (self, N/A), `timeline_events.lead_id ON DELETE CASCADE`, `lead_intake_events.lead_id SET NULL`. No blocking references.
+- RLS: DELETE policy exists for authenticated staff.
 
-## Interaction & safety rules
+### Change
+1. Add `deleteLead(id)` server fn in `src/lib/leads.functions.ts` — auth-required, single `.delete().eq('id', id)`, returns `{ok:true}`. No status coercion.
+2. In `leads.index.tsx`:
+   - Rename action label to "Видалити" with `Trash2` icon (destructive).
+   - Rename local state `archiving` → `deleting`.
+   - Replace mutation body with `deleteFn({data:{id}})`.
+   - `ConfirmDeleteDialog` → `variant="delete"`, impact copy: "Ліда буде видалено назавжди. Пов'язаний клієнт (якщо є) залишиться, але посилання на лід буде очищено. Історія таймлайну видалиться разом з лідом." Toast: "Ліда видалено".
+   - Invalidate `["leads", branch.id]` and `["overview", branch.id]`.
+3. Keep archived-status semantics intact (still a valid status via Ticket A) — the archive action itself is removed from the row menu; users who want soft-archive use the status dropdown.
 
-- `DataTable` extension: rows get `cursor-pointer hover:bg-muted/40 focus:ring-2` when navigable; internal interactive descendants (`button, a, [role="menuitem"], input, select, [data-stop]`) already stop propagation via delegated handler.
-- Optimistic inline edits: mutate → toast → invalidate queryKey; on error revert + `toast.error`.
-- Confirm dialogs list dependency counts where cheap (e.g. children in group). Block delete when unsafe with helpful message.
-- Respect existing RLS; hide destructive actions when `has_role` check unavailable (default to admin/manager gate already used).
-- Keep all queries `branch.id`-scoped. No new N+1 loops.
+### Disposable verification
+- Insert one QA lead via UI ("QA — DELETE ME", branch = current test branch, status `new`).
+- Trigger row action → confirm → verify row disappears, `select count(*)` matches, and timeline row for that lead is gone. Screenshot both.
+- Do NOT touch any of the 396 production records.
 
-## Validation
+---
 
-- `tsgo` typecheck.
-- Playwright smoke: Overview, Leads, Clients, Children, Employees, Groups, Services, Finance settlements, Admin branches. Verify row click navigates, action menu stops propagation, confirm dialog opens (cancel), one inline status change on a reversible QA record only if one exists — otherwise open the popover and cancel.
+## Files touched
+- `supabase migration`: create `lead_statuses`, grants, RLS, seed (12 rows).
+- `src/lib/settings.functions.ts`: +3 fns.
+- `src/lib/leads.functions.ts`: +`deleteLead`.
+- `src/lib/leads.ts`: mark LEAD_STATUSES as fallback (keep exports).
+- `src/lib/hooks/use-lead-statuses.ts` (new): shared resolver hook.
+- `src/routes/_authenticated/admin.lead-statuses.tsx` (new).
+- `src/lib/nav.ts`: +nav entry.
+- `src/routes/_authenticated/leads.index.tsx`: swap archive→delete; use hook.
+- `src/routes/_authenticated/leads.$id.tsx`: use hook.
+- `src/components/leads/leads-funnel.tsx`: resolve labels/tones via hook.
+- `src/components/overview/dashboard.tsx`: use hook resolver.
 
-## Out of scope this pass
-
-- New charting library.
-- Refactoring existing finance RPCs.
-- Any migration touching production rows.
+## Verification
+- `bunx tsgo --noEmit` + prod build.
+- Playwright: open Leads page → verify status dropdowns render seeded labels; open `/admin/lead-statuses` → rename one label → confirm it appears in Leads filter/inline. Create QA lead → delete via row action → confirm removal and cache refresh. Restore renamed label.
+- SQL sanity: `select count(*) from leads;` before/after equals 396 (+/- the QA lead which is inserted then deleted).
