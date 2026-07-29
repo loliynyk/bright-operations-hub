@@ -71,8 +71,8 @@ function LeadDetail() {
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Лід</p>
             <h1 className="text-2xl font-semibold tracking-tight">{lead.parent_name}</h1>
           </div>
-          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusTone(lead.status)}`}>
-            {statusLabel(lead.status)}
+          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statuses.tone(lead.status)}`}>
+            {statuses.label(lead.status)}
           </span>
         </div>
         <div className="flex gap-2">
