@@ -20,7 +20,7 @@ import { KpiGrid } from "@/components/ds/kpi-grid";
 import { Progress } from "@/components/ui/progress";
 import { useBranch } from "@/lib/branch-context";
 import { getOverviewDashboard } from "@/lib/overview.functions";
-import { statusLabel } from "@/lib/leads";
+import { useLeadStatuses } from "@/lib/hooks/use-lead-statuses";
 import { formatDate } from "@/components/ds/data-table";
 
 const fmt = (n: number) =>
