@@ -67,6 +67,7 @@ export const NAV: NavItem[] = [
       { to: "/admin/expense-categories", label: "Категорії витрат" },
       { to: "/admin/income-categories", label: "Категорії доходів" },
       { to: "/admin/lead-sources", label: "Джерела лідів" },
+      { to: "/admin/lead-statuses", label: "Статуси лідів" },
       { to: "/admin/email-templates", label: "Шаблони листів" },
     ],
   },
