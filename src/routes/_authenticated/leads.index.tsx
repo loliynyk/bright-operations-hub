@@ -71,7 +71,7 @@ function LeadsIndex() {
     onSuccess: () => {
       toast.success("Ліда видалено");
       qc.invalidateQueries({ queryKey: ["leads", branch.id] });
-      qc.invalidateQueries({ queryKey: ["overview", branch.id] });
+      qc.invalidateQueries({ queryKey: ["overview-dashboard", branch.id] });
       setDeleting(null);
     },
     onError: (e: any) => toast.error("Помилка", { description: e.message }),

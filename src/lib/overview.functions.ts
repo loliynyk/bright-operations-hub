@@ -243,6 +243,11 @@ export const updateLeadStatus = createServerFn({ method: "POST" })
       .from("leads").select("status").eq("id", data.id).maybeSingle();
     if (!prev) throw new Error("Ліда не знайдено");
     if (prev.status === data.status) return { ok: true };
+    const { data: target, error: sErr } = await supabase
+      .from("lead_statuses").select("code, is_active").eq("code", data.status).maybeSingle();
+    if (sErr) throw new Error(sErr.message);
+    if (!target) throw new Error(`Невідомий статус: ${data.status}`);
+    if (!target.is_active) throw new Error("Цей статус неактивний і не може бути призначений");
     const { error } = await supabase
       .from("leads").update({ status: data.status } as any).eq("id", data.id);
     if (error) throw new Error(error.message);
@@ -254,6 +259,7 @@ export const updateLeadStatus = createServerFn({ method: "POST" })
     } as any);
     return { ok: true };
   });
+
 
 /**
  * Inline client status update.

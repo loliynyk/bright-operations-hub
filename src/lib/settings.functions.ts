@@ -387,9 +387,16 @@ export const listLeadStatuses = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
-const LeadStatusSchema = z.object({
-  id: z.string().uuid().optional(),
+const LeadStatusCreateSchema = z.object({
   code: z.string().min(1).max(64).regex(/^[a-z0-9_]+$/, "Код: маленькі літери, цифри, підкреслення"),
+  label: z.string().min(1).max(80),
+  tone: z.string().min(1).max(200),
+  sort_order: z.number().int().min(0).max(9999),
+  is_active: z.boolean(),
+});
+
+const LeadStatusUpdateSchema = z.object({
+  id: z.string().uuid(),
   label: z.string().min(1).max(80),
   tone: z.string().min(1).max(200),
   sort_order: z.number().int().min(0).max(9999),
@@ -398,34 +405,57 @@ const LeadStatusSchema = z.object({
 
 export const upsertLeadStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => LeadStatusSchema.parse(d))
+  .inputValidator((d: unknown) => {
+    const raw = d as any;
+    return raw && raw.id ? LeadStatusUpdateSchema.parse(raw) : LeadStatusCreateSchema.parse(raw);
+  })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    if (data.id) {
+    if ("id" in data && data.id) {
       const { data: existing, error: eErr } = await context.supabase
         .from("lead_statuses").select("code, is_system").eq("id", data.id).maybeSingle();
       if (eErr) throw new Error(eErr.message);
       if (!existing) throw new Error("Статус не знайдено");
-      // Guard: system code cannot be renamed (code) and 'new'/'converted' cannot be deactivated
-      const patch: any = {
+      // Codes are immutable after creation for every status; only label/tone/order/active editable here.
+      if ((existing.code === "new" || existing.code === "converted") && data.is_active === false) {
+        throw new Error("Цей статус не можна деактивувати");
+      }
+      const patch = {
         label: data.label,
         tone: data.tone,
         sort_order: data.sort_order,
         is_active: data.is_active,
       };
-      if (!existing.is_system) patch.code = data.code;
-      if ((existing.code === "new" || existing.code === "converted") && data.is_active === false) {
-        throw new Error("Цей статус не можна деактивувати");
-      }
       const { error } = await context.supabase.from("lead_statuses").update(patch).eq("id", data.id);
       if (error) throw new Error(error.message);
     } else {
+      const create = data as z.infer<typeof LeadStatusCreateSchema>;
       const { error } = await context.supabase.from("lead_statuses").insert({
-        code: data.code, label: data.label, tone: data.tone,
-        sort_order: data.sort_order, is_active: data.is_active, is_system: false,
+        code: create.code, label: create.label, tone: create.tone,
+        sort_order: create.sort_order, is_active: create.is_active, is_system: false,
       });
       if (error) throw new Error(error.message);
     }
+    return { ok: true };
+  });
+
+export const setLeadStatusActive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ id: z.string().uuid(), is_active: z.boolean() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { data: existing, error: eErr } = await context.supabase
+      .from("lead_statuses").select("code").eq("id", data.id).maybeSingle();
+    if (eErr) throw new Error(eErr.message);
+    if (!existing) throw new Error("Статус не знайдено");
+    if (!data.is_active && (existing.code === "new" || existing.code === "converted")) {
+      throw new Error("Цей статус не можна деактивувати");
+    }
+    const { error } = await context.supabase
+      .from("lead_statuses").update({ is_active: data.is_active }).eq("id", data.id);
+    if (error) throw new Error(error.message);
     return { ok: true };
   });
 
@@ -440,10 +470,11 @@ export const deleteLeadStatus = createServerFn({ method: "POST" })
     if (!row) throw new Error("Статус не знайдено");
     if (row.is_system) throw new Error("Системний статус не можна видалити");
     const { count, error: cErr } = await context.supabase
-      .from("leads").select("id", { count: "exact", head: true }).eq("status", row.code as any);
+      .from("leads").select("id", { count: "exact", head: true }).eq("status", row.code);
     if (cErr) throw new Error(cErr.message);
     if ((count ?? 0) > 0) throw new Error(`Використовується у ${count} лідах. Спочатку змініть статус цих лідів.`);
     const { error } = await context.supabase.from("lead_statuses").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
