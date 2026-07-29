@@ -95,11 +95,11 @@ function LeadsIndex() {
     {
       key: "status",
       header: "Статус",
-      sortAccessor: (r) => statusLabel(r.status),
+      sortAccessor: (r) => statuses.label(r.status),
       render: (r) => (
         <InlineStatusSelect
           value={r.status}
-          options={LEAD_STATUSES.map((s) => ({ value: s.value, label: s.label }))}
+          options={statuses.assignableFor(r.status).map((s) => ({ value: s.code, label: s.label }))}
           onChange={(next) => statusMutation.mutateAsync({ id: r.id, status: next })}
           ariaLabel="Змінити статус"
         />
