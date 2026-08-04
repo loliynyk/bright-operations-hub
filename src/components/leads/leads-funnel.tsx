@@ -8,30 +8,41 @@ export type FunnelStage = {
   tone: string;
 };
 
-// Practical funnel grouping over existing lead_status values.
+// Funnel grouping over the finalized lead workflow statuses (legacy codes kept
+// visible so historical records still land in a stage).
 export const FUNNEL_STAGES: FunnelStage[] = [
   { key: "new", label: "Нові", statuses: ["new"], tone: "bg-blue-500" },
   {
     key: "working",
     label: "В роботі",
-    statuses: ["contacted", "negotiation"],
+    statuses: ["in_progress", "contacted", "negotiation"],
     tone: "bg-indigo-500",
   },
   {
     key: "visit",
-    label: "Візит / пробний",
-    statuses: ["tour_scheduled", "tour_done", "trial"],
+    label: "Огляд",
+    statuses: ["visit_scheduled", "visit_missed", "visit_completed_deciding", "tour_scheduled", "tour_done", "trial"],
     tone: "bg-fuchsia-500",
   },
-  { key: "waiting", label: "Очікування", statuses: ["waiting"], tone: "bg-slate-500" },
-  { key: "contract", label: "Договір", statuses: ["contract"], tone: "bg-teal-500" },
+  { key: "future", label: "Плани на потім", statuses: ["future_interest", "waiting"], tone: "bg-slate-500" },
+  {
+    key: "contract",
+    label: "Бронювання / договір",
+    statuses: ["reserved", "contract_signing", "contract"],
+    tone: "bg-teal-500",
+  },
   {
     key: "converted",
     label: "Конвертовані",
     statuses: ["converted", "won"],
     tone: "bg-emerald-500",
   },
-  { key: "lost", label: "Втрачені", statuses: ["lost", "archived"], tone: "bg-rose-500" },
+  {
+    key: "closed",
+    label: "Закриті",
+    statuses: ["declined_before_visit", "declined_after_visit", "unreachable", "not_accepted", "lost", "archived"],
+    tone: "bg-rose-500",
+  },
 ];
 
 type Lead = { status?: string | null };
