@@ -15,7 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { listLeads, saveLead, deleteLead } from "@/lib/leads.functions";
+import { listLeads, saveLead } from "@/lib/leads.functions";
+import { hardDeleteLead } from "@/lib/lead-admissions.functions";
 import { updateLeadStatus } from "@/lib/overview.functions";
 import { listLookups } from "@/lib/lookups.functions";
 import { sourceLabel, LEAD_SOURCES } from "@/lib/leads";
@@ -36,7 +37,7 @@ function LeadsIndex() {
   const listFn = useServerFn(listLeads);
   const lookupsFn = useServerFn(listLookups);
   const updateStatusFn = useServerFn(updateLeadStatus);
-  const deleteFn = useServerFn(deleteLead);
+  const deleteFn = useServerFn(hardDeleteLead);
   const statuses = useLeadStatuses();
 
   const { data: leads = [], isLoading } = useQuery({
