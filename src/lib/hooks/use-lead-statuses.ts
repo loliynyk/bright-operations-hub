@@ -12,6 +12,10 @@ export type LeadStatusRow = {
   sort_order: number;
   is_active: boolean;
   is_system: boolean;
+  category?: string | null;
+  requires_next_action?: boolean | null;
+  requires_closing_reason?: boolean | null;
+  is_legacy?: boolean | null;
 };
 
 const FALLBACK_ROWS: LeadStatusRow[] = FALLBACK.map((s, i) => ({
@@ -22,6 +26,10 @@ const FALLBACK_ROWS: LeadStatusRow[] = FALLBACK.map((s, i) => ({
   sort_order: (i + 1) * 10,
   is_active: true,
   is_system: ["new", "converted", "archived", "lost"].includes(s.value),
+  category: s.value === "converted" ? "converted" : "open",
+  requires_next_action: false,
+  requires_closing_reason: false,
+  is_legacy: false,
 }));
 
 export function useLeadStatuses() {
