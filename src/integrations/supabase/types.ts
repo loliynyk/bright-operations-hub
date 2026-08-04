@@ -158,6 +158,7 @@ export type Database = {
       }
       children: {
         Row: {
+          actual_start_date: string | null
           birth_date: string | null
           branch_id: string
           client_id: string
@@ -167,11 +168,16 @@ export type Database = {
           group_id: string | null
           id: string
           last_name: string | null
+          not_started_at: string | null
+          not_started_reason: string | null
+          planned_start_date: string | null
+          source_lead_child_id: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["child_status"]
           updated_at: string
         }
         Insert: {
+          actual_start_date?: string | null
           birth_date?: string | null
           branch_id: string
           client_id: string
@@ -181,11 +187,16 @@ export type Database = {
           group_id?: string | null
           id?: string
           last_name?: string | null
+          not_started_at?: string | null
+          not_started_reason?: string | null
+          planned_start_date?: string | null
+          source_lead_child_id?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["child_status"]
           updated_at?: string
         }
         Update: {
+          actual_start_date?: string | null
           birth_date?: string | null
           branch_id?: string
           client_id?: string
@@ -195,6 +206,10 @@ export type Database = {
           group_id?: string | null
           id?: string
           last_name?: string | null
+          not_started_at?: string | null
+          not_started_reason?: string | null
+          planned_start_date?: string | null
+          source_lead_child_id?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["child_status"]
           updated_at?: string
@@ -338,51 +353,87 @@ export type Database = {
       }
       clients: {
         Row: {
+          actual_address: string | null
           address: string | null
           branch_id: string
           created_at: string
           created_by: string | null
+          doc_expiry_date: string | null
+          doc_issue_date: string | null
+          doc_issuer: string | null
+          doc_number: string | null
+          doc_record_number: string | null
+          doc_series: string | null
+          doc_type: string | null
           email: string | null
           id: string
           lead_id: string | null
           notes: string | null
+          parent_birth_date: string | null
           parent_first_name: string
           parent_last_name: string
+          parent_patronymic: string | null
           phone: string | null
+          registered_address: string | null
           service_id: string | null
           status: Database["public"]["Enums"]["client_status"]
+          tax_id: string | null
           updated_at: string
         }
         Insert: {
+          actual_address?: string | null
           address?: string | null
           branch_id: string
           created_at?: string
           created_by?: string | null
+          doc_expiry_date?: string | null
+          doc_issue_date?: string | null
+          doc_issuer?: string | null
+          doc_number?: string | null
+          doc_record_number?: string | null
+          doc_series?: string | null
+          doc_type?: string | null
           email?: string | null
           id?: string
           lead_id?: string | null
           notes?: string | null
+          parent_birth_date?: string | null
           parent_first_name: string
           parent_last_name: string
+          parent_patronymic?: string | null
           phone?: string | null
+          registered_address?: string | null
           service_id?: string | null
           status?: Database["public"]["Enums"]["client_status"]
+          tax_id?: string | null
           updated_at?: string
         }
         Update: {
+          actual_address?: string | null
           address?: string | null
           branch_id?: string
           created_at?: string
           created_by?: string | null
+          doc_expiry_date?: string | null
+          doc_issue_date?: string | null
+          doc_issuer?: string | null
+          doc_number?: string | null
+          doc_record_number?: string | null
+          doc_series?: string | null
+          doc_type?: string | null
           email?: string | null
           id?: string
           lead_id?: string | null
           notes?: string | null
+          parent_birth_date?: string | null
           parent_first_name?: string
           parent_last_name?: string
+          parent_patronymic?: string | null
           phone?: string | null
+          registered_address?: string | null
           service_id?: string | null
           status?: Database["public"]["Enums"]["client_status"]
+          tax_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -431,6 +482,7 @@ export type Database = {
           price_version_id: string | null
           recalc_locked: boolean
           service_id: string | null
+          source_lead_contract_id: string | null
           start_date: string
           status: Database["public"]["Enums"]["contract_status"]
           updated_at: string
@@ -456,6 +508,7 @@ export type Database = {
           price_version_id?: string | null
           recalc_locked?: boolean
           service_id?: string | null
+          source_lead_contract_id?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["contract_status"]
           updated_at?: string
@@ -481,6 +534,7 @@ export type Database = {
           price_version_id?: string | null
           recalc_locked?: boolean
           service_id?: string | null
+          source_lead_contract_id?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["contract_status"]
           updated_at?: string
@@ -976,6 +1030,380 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_children: {
+        Row: {
+          agreed_at: string | null
+          approved_by: string | null
+          base_price: number | null
+          birth_date: string | null
+          branch_id: string | null
+          converted_child_id: string | null
+          created_at: string
+          discount_reason: string | null
+          discount_type: string | null
+          discount_value: number
+          final_price: number | null
+          first_name: string
+          gender: string | null
+          group_id: string | null
+          id: string
+          last_name: string | null
+          lead_id: string
+          notes: string | null
+          patronymic: string | null
+          plan_id: string | null
+          planned_start_date: string | null
+          price_version_id: string | null
+          service_id: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          agreed_at?: string | null
+          approved_by?: string | null
+          base_price?: number | null
+          birth_date?: string | null
+          branch_id?: string | null
+          converted_child_id?: string | null
+          created_at?: string
+          discount_reason?: string | null
+          discount_type?: string | null
+          discount_value?: number
+          final_price?: number | null
+          first_name: string
+          gender?: string | null
+          group_id?: string | null
+          id?: string
+          last_name?: string | null
+          lead_id: string
+          notes?: string | null
+          patronymic?: string | null
+          plan_id?: string | null
+          planned_start_date?: string | null
+          price_version_id?: string | null
+          service_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          agreed_at?: string | null
+          approved_by?: string | null
+          base_price?: number | null
+          birth_date?: string | null
+          branch_id?: string | null
+          converted_child_id?: string | null
+          created_at?: string
+          discount_reason?: string | null
+          discount_type?: string | null
+          discount_value?: number
+          final_price?: number | null
+          first_name?: string
+          gender?: string | null
+          group_id?: string | null
+          id?: string
+          last_name?: string | null
+          lead_id?: string
+          notes?: string | null
+          patronymic?: string | null
+          plan_id?: string | null
+          planned_start_date?: string | null
+          price_version_id?: string | null
+          service_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_children_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_children_converted_child_id_fkey"
+            columns: ["converted_child_id"]
+            isOneToOne: false
+            referencedRelation: "children"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_children_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_children_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_children_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_children_price_version_id_fkey"
+            columns: ["price_version_id"]
+            isOneToOne: false
+            referencedRelation: "price_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_children_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_contact_attempts: {
+        Row: {
+          attempted_at: string
+          channel: string
+          created_at: string
+          created_by: string | null
+          id: string
+          lead_id: string
+          notes: string | null
+          outcome: string
+        }
+        Insert: {
+          attempted_at?: string
+          channel: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lead_id: string
+          notes?: string | null
+          outcome: string
+        }
+        Update: {
+          attempted_at?: string
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lead_id?: string
+          notes?: string | null
+          outcome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_contact_attempts_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_contract_files: {
+        Row: {
+          created_at: string
+          filename: string | null
+          id: string
+          kind: string
+          lead_contract_id: string
+          mime: string | null
+          path: string
+          size: number | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          filename?: string | null
+          id?: string
+          kind: string
+          lead_contract_id: string
+          mime?: string | null
+          path: string
+          size?: number | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          filename?: string | null
+          id?: string
+          kind?: string
+          lead_contract_id?: string
+          mime?: string | null
+          path?: string
+          size?: number | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_contract_files_lead_contract_id_fkey"
+            columns: ["lead_contract_id"]
+            isOneToOne: false
+            referencedRelation: "lead_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_contracts: {
+        Row: {
+          branch_id: string | null
+          contract_date: string | null
+          created_at: string
+          draft_filename: string | null
+          draft_mime: string | null
+          draft_path: string | null
+          draft_size: number | null
+          email_body: string | null
+          email_error: string | null
+          email_result: string | null
+          email_subject: string | null
+          final_filename: string | null
+          final_mime: string | null
+          final_path: string | null
+          final_size: number | null
+          finalized_at: string | null
+          finalized_by: string | null
+          id: string
+          is_active: boolean
+          lead_id: string
+          linked_client_id: string | null
+          linked_contract_id: string | null
+          number: string | null
+          sent_at: string | null
+          sent_by: string | null
+          sent_to_email: string | null
+          signature_comment: string | null
+          signature_is_physical: boolean
+          signature_recorded_at: string | null
+          signature_recorded_by: string | null
+          signed_date: string | null
+          signed_filename: string | null
+          signed_mime: string | null
+          signed_path: string | null
+          signed_size: number | null
+          status: string
+          updated_at: string
+          uploaded_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          contract_date?: string | null
+          created_at?: string
+          draft_filename?: string | null
+          draft_mime?: string | null
+          draft_path?: string | null
+          draft_size?: number | null
+          email_body?: string | null
+          email_error?: string | null
+          email_result?: string | null
+          email_subject?: string | null
+          final_filename?: string | null
+          final_mime?: string | null
+          final_path?: string | null
+          final_size?: number | null
+          finalized_at?: string | null
+          finalized_by?: string | null
+          id?: string
+          is_active?: boolean
+          lead_id: string
+          linked_client_id?: string | null
+          linked_contract_id?: string | null
+          number?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          sent_to_email?: string | null
+          signature_comment?: string | null
+          signature_is_physical?: boolean
+          signature_recorded_at?: string | null
+          signature_recorded_by?: string | null
+          signed_date?: string | null
+          signed_filename?: string | null
+          signed_mime?: string | null
+          signed_path?: string | null
+          signed_size?: number | null
+          status?: string
+          updated_at?: string
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          contract_date?: string | null
+          created_at?: string
+          draft_filename?: string | null
+          draft_mime?: string | null
+          draft_path?: string | null
+          draft_size?: number | null
+          email_body?: string | null
+          email_error?: string | null
+          email_result?: string | null
+          email_subject?: string | null
+          final_filename?: string | null
+          final_mime?: string | null
+          final_path?: string | null
+          final_size?: number | null
+          finalized_at?: string | null
+          finalized_by?: string | null
+          id?: string
+          is_active?: boolean
+          lead_id?: string
+          linked_client_id?: string | null
+          linked_contract_id?: string | null
+          number?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          sent_to_email?: string | null
+          signature_comment?: string | null
+          signature_is_physical?: boolean
+          signature_recorded_at?: string | null
+          signature_recorded_by?: string | null
+          signed_date?: string | null
+          signed_filename?: string | null
+          signed_mime?: string | null
+          signed_path?: string | null
+          signed_size?: number | null
+          status?: string
+          updated_at?: string
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_contracts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_contracts_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_contracts_linked_client_id_fkey"
+            columns: ["linked_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_contracts_linked_contract_id_fkey"
+            columns: ["linked_contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_intake_events: {
         Row: {
           created_at: string
@@ -1100,36 +1528,163 @@ export type Database = {
           },
         ]
       }
+      lead_legal_data: {
+        Row: {
+          actual_address: string | null
+          birth_date: string | null
+          created_at: string
+          doc_expiry_date: string | null
+          doc_issue_date: string | null
+          doc_issuer: string | null
+          doc_notes: string | null
+          doc_number: string | null
+          doc_record_number: string | null
+          doc_series: string | null
+          doc_type: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          lead_id: string
+          patronymic: string | null
+          registered_address: string | null
+          same_address: boolean
+          tax_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          actual_address?: string | null
+          birth_date?: string | null
+          created_at?: string
+          doc_expiry_date?: string | null
+          doc_issue_date?: string | null
+          doc_issuer?: string | null
+          doc_notes?: string | null
+          doc_number?: string | null
+          doc_record_number?: string | null
+          doc_series?: string | null
+          doc_type?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          lead_id: string
+          patronymic?: string | null
+          registered_address?: string | null
+          same_address?: boolean
+          tax_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          actual_address?: string | null
+          birth_date?: string | null
+          created_at?: string
+          doc_expiry_date?: string | null
+          doc_issue_date?: string | null
+          doc_issuer?: string | null
+          doc_notes?: string | null
+          doc_number?: string | null
+          doc_record_number?: string | null
+          doc_series?: string | null
+          doc_type?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          lead_id?: string
+          patronymic?: string | null
+          registered_address?: string | null
+          same_address?: boolean
+          tax_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_legal_data_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_status_manual_review: {
+        Row: {
+          created_at: string
+          id: string
+          lead_id: string
+          legacy_status: string
+          reason: string
+          resolved_at: string | null
+          resolved_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lead_id: string
+          legacy_status: string
+          reason: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lead_id?: string
+          legacy_status?: string
+          reason?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_status_manual_review_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_statuses: {
         Row: {
+          category: string
           code: string
           created_at: string
           id: string
           is_active: boolean
+          is_legacy: boolean
           is_system: boolean
           label: string
+          requires_closing_reason: boolean
+          requires_next_action: boolean
           sort_order: number
           tone: string
           updated_at: string
         }
         Insert: {
+          category?: string
           code: string
           created_at?: string
           id?: string
           is_active?: boolean
+          is_legacy?: boolean
           is_system?: boolean
           label: string
+          requires_closing_reason?: boolean
+          requires_next_action?: boolean
           sort_order?: number
           tone?: string
           updated_at?: string
         }
         Update: {
+          category?: string
           code?: string
           created_at?: string
           id?: string
           is_active?: boolean
+          is_legacy?: boolean
           is_system?: boolean
           label?: string
+          requires_closing_reason?: boolean
+          requires_next_action?: boolean
           sort_order?: number
           tone?: string
           updated_at?: string
@@ -1144,6 +1699,12 @@ export type Database = {
           child_first_name: string | null
           child_last_name: string | null
           child_name: string | null
+          close_reason_code: string | null
+          close_reason_comment: string | null
+          closed_at: string | null
+          closed_by: string | null
+          contact_attempt_count: number
+          converted_at: string | null
           converted_client_id: string | null
           created_at: string
           created_by: string | null
@@ -1151,6 +1712,7 @@ export type Database = {
           id: string
           lost_reason: string | null
           next_action_at: string | null
+          next_action_note: string | null
           notes: string | null
           parent_address: string | null
           parent_email: string | null
@@ -1158,6 +1720,7 @@ export type Database = {
           parent_last_name: string | null
           parent_name: string
           parent_phone: string | null
+          preferred_channel: string | null
           registration_date: string | null
           service_id: string | null
           source: Database["public"]["Enums"]["lead_source"] | null
@@ -1165,6 +1728,7 @@ export type Database = {
           status: string
           trial_date: string | null
           updated_at: string
+          visit_at: string | null
         }
         Insert: {
           assigned_to?: string | null
@@ -1173,6 +1737,12 @@ export type Database = {
           child_first_name?: string | null
           child_last_name?: string | null
           child_name?: string | null
+          close_reason_code?: string | null
+          close_reason_comment?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          contact_attempt_count?: number
+          converted_at?: string | null
           converted_client_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -1180,6 +1750,7 @@ export type Database = {
           id?: string
           lost_reason?: string | null
           next_action_at?: string | null
+          next_action_note?: string | null
           notes?: string | null
           parent_address?: string | null
           parent_email?: string | null
@@ -1187,6 +1758,7 @@ export type Database = {
           parent_last_name?: string | null
           parent_name: string
           parent_phone?: string | null
+          preferred_channel?: string | null
           registration_date?: string | null
           service_id?: string | null
           source?: Database["public"]["Enums"]["lead_source"] | null
@@ -1194,6 +1766,7 @@ export type Database = {
           status?: string
           trial_date?: string | null
           updated_at?: string
+          visit_at?: string | null
         }
         Update: {
           assigned_to?: string | null
@@ -1202,6 +1775,12 @@ export type Database = {
           child_first_name?: string | null
           child_last_name?: string | null
           child_name?: string | null
+          close_reason_code?: string | null
+          close_reason_comment?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          contact_attempt_count?: number
+          converted_at?: string | null
           converted_client_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -1209,6 +1788,7 @@ export type Database = {
           id?: string
           lost_reason?: string | null
           next_action_at?: string | null
+          next_action_note?: string | null
           notes?: string | null
           parent_address?: string | null
           parent_email?: string | null
@@ -1216,6 +1796,7 @@ export type Database = {
           parent_last_name?: string | null
           parent_name?: string
           parent_phone?: string | null
+          preferred_channel?: string | null
           registration_date?: string | null
           service_id?: string | null
           source?: Database["public"]["Enums"]["lead_source"] | null
@@ -1223,6 +1804,7 @@ export type Database = {
           status?: string
           trial_date?: string | null
           updated_at?: string
+          visit_at?: string | null
         }
         Relationships: [
           {
@@ -1254,6 +1836,24 @@ export type Database = {
             referencedColumns: ["code"]
           },
         ]
+      }
+      leads_status_backup_2026_08: {
+        Row: {
+          backed_up_at: string
+          lead_id: string
+          status: string
+        }
+        Insert: {
+          backed_up_at?: string
+          lead_id: string
+          status: string
+        }
+        Update: {
+          backed_up_at?: string
+          lead_id?: string
+          status?: string
+        }
+        Relationships: []
       }
       payment_allocations: {
         Row: {
@@ -1836,6 +2436,10 @@ export type Database = {
           contract_id: string
         }[]
       }
+      convert_lead_to_client_v2: {
+        Args: { _existing_client_id?: string; _lead_id: string }
+        Returns: Json
+      }
       generate_monthly_payroll: {
         Args: { _branch_id: string; _period_month: string }
         Returns: number
@@ -1849,6 +2453,10 @@ export type Database = {
         Returns: boolean
       }
       is_admin_or_manager: { Args: { _user_id: string }; Returns: boolean }
+      mark_child_not_started: {
+        Args: { _cancel_date: string; _child_id: string; _reason: string }
+        Returns: Json
+      }
       post_payment: {
         Args: {
           _allocations: Json
@@ -1876,12 +2484,22 @@ export type Database = {
         Args: { _child_id: string; _note?: string }
         Returns: Json
       }
+      start_child_attendance: {
+        Args: { _actual_start: string; _child_id: string }
+        Returns: Json
+      }
       void_payment: { Args: { _payment_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "manager" | "teacher" | "accountant"
       charge_status: "pending" | "paid" | "partial" | "cancelled" | "overdue"
-      child_status: "active" | "paused" | "graduated" | "archived"
+      child_status:
+        | "active"
+        | "paused"
+        | "graduated"
+        | "archived"
+        | "pending_start"
+        | "not_started"
       client_status: "active" | "paused" | "archived"
       contract_status:
         | "draft"
@@ -2071,7 +2689,14 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "manager", "teacher", "accountant"],
       charge_status: ["pending", "paid", "partial", "cancelled", "overdue"],
-      child_status: ["active", "paused", "graduated", "archived"],
+      child_status: [
+        "active",
+        "paused",
+        "graduated",
+        "archived",
+        "pending_start",
+        "not_started",
+      ],
       client_status: ["active", "paused", "archived"],
       contract_status: [
         "draft",
